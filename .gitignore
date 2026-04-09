@@ -38,4 +38,3 @@ repo/frontend/coverage/
 .claude/
 
 # Generated session exports
-sessions/*.json
