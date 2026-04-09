@@ -1,0 +1,41 @@
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Node and frontend build artifacts
+**/node_modules/
+repo/frontend/dist/
+repo/frontend/.svelte-kit/
+repo/frontend/.vite/
+repo/frontend/.vitest/
+repo/frontend/coverage/
+
+# Local workspace artifacts
+.claude/
+
+# Generated session exports
+sessions/*.json

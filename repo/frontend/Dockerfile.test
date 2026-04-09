@@ -1,0 +1,9 @@
+# ForgeOps Offline Console - Test Runner
+# Installs all dependencies (including devDependencies) and runs vitest
+
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --include=dev
+COPY . .
+CMD ["npm", "run", "test"]

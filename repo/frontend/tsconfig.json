@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "$app/*": ["src/app/*"],
+      "$routes/*": ["src/routes/*"],
+      "$components/*": ["src/components/*"],
+      "$modules/*": ["src/modules/*"],
+      "$lib/*": ["src/lib/*"],
+      "$styles/*": ["src/styles/*"]
+    },
+    "types": ["svelte", "vitest/globals"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.svelte",
+    "unit_tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
