@@ -3,6 +3,7 @@ import { validateFileIngest } from '$lib/validators';
 import { ValidationServiceError } from '$lib/services/errors';
 import { createLogger } from '$lib/logging';
 import { arrayBufferToBase64 } from '$lib/security/crypto';
+import { getCurrentDEK } from '$lib/security/auth.service';
 import { FILE_CHUNK_SIZE } from '$lib/constants';
 import { TransferState } from '$lib/types/enums';
 import type { FileRecord, TransferSession } from '$lib/types/files';
@@ -61,6 +62,7 @@ export async function ingestFile(
     currentVersionId: '',
     createdBy,
     isDeleted: false,
+    encryptedWithDEK: getCurrentDEK() !== null,
     createdAt: now,
     updatedAt: now,
     version: 1,
@@ -172,4 +174,47 @@ export async function getFiles(): Promise<FileRecord[]> {
 
 export async function getTransferSession(sessionId: string): Promise<TransferSession | undefined> {
   return transferRepo.getById(sessionId);
+}
+
+export async function uploadNewVersion(
+  fileId: string,
+  fileData: ArrayBuffer,
+  userId: string,
+): Promise<{ file: FileRecord; session: TransferSession | null; deduplicated: boolean }> {
+  const file = await fileRepo.getById(fileId);
+  if (!file) {
+    throw new ValidationServiceError('File not found', [
+      { field: 'fileId', message: 'File does not exist', code: 'not_found' },
+    ]);
+  }
+  if (file.isDeleted) {
+    throw new ValidationServiceError('File is deleted', [
+      { field: 'fileId', message: 'Cannot version a deleted file', code: 'deleted' },
+    ]);
+  }
+
+  const sha256 = await computeHash(fileData);
+
+  // Same content as current version — skip
+  if (sha256 === file.sha256) {
+    logger.info('New version skipped (same hash)', { fileId, sha256 });
+    return { file, session: null, deduplicated: true };
+  }
+
+  // Create transfer session for the new version's chunks
+  const totalChunks = Math.ceil(fileData.byteLength / FILE_CHUNK_SIZE);
+  const session = await createTransferSession(fileId, fileData.byteLength, totalChunks);
+
+  // Update file record with new hash and size
+  const now = new Date().toISOString();
+  const updatedFile = await fileRepo.put({
+    ...file,
+    sha256,
+    size: fileData.byteLength,
+    encryptedWithDEK: getCurrentDEK() !== null,
+    updatedAt: now,
+  });
+
+  logger.info('New version upload started', { fileId, sha256, totalChunks });
+  return { file: updatedFile, session, deduplicated: false };
 }

@@ -6,8 +6,8 @@ describe('Database Schema', () => {
     expect(DB_NAME).toBe('forgeops-offline');
   });
 
-  it('database version is 2', () => {
-    expect(DB_VERSION).toBe(2);
+  it('database version is 3', () => {
+    expect(DB_VERSION).toBe(3);
   });
 
   it('STORE_NAMES has 25 entries', () => {
@@ -56,6 +56,15 @@ describe('Database Schema', () => {
     expect(indexNames).toContain('orderId');
     expect(indexNames).toContain('status');
     expect(indexNames).toContain('lastActivityAt');
+  });
+
+  it('chunks store has fileId, chunkIndex, and versionId indexes', () => {
+    const chunksDef = STORE_DEFINITIONS.find(d => d.name === STORE_NAMES.CHUNKS);
+    expect(chunksDef).toBeDefined();
+    const indexNames = chunksDef!.indexes.map(i => i.name);
+    expect(indexNames).toContain('fileId');
+    expect(indexNames).toContain('chunkIndex');
+    expect(indexNames).toContain('versionId');
   });
 
   it('files store has sha256, name, createdBy, isDeleted indexes', () => {

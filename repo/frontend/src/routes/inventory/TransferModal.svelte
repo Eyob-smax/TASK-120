@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import Modal from '$components/Modal.svelte';
-  import { transferStock, loadInventory } from '$modules/inventory';
+  import { optimisticTransfer } from '$modules/inventory';
 
   export let open = false;
 
@@ -22,8 +22,7 @@
     error = '';
     submitting = true;
     try {
-      await transferStock(fromBinId, toBinId, skuId, quantity, fromWarehouseId, toWarehouseId, notes || undefined);
-      await loadInventory();
+      await optimisticTransfer(fromBinId, toBinId, skuId, quantity, fromWarehouseId, toWarehouseId, notes || undefined);
       toast?.addToast(`Transferred ${quantity} units of ${skuId}`, 'success');
       resetForm();
       open = false;

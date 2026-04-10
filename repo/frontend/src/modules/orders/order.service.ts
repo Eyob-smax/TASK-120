@@ -224,7 +224,7 @@ export async function releaseExpiredReservations(
 
   const released: Reservation[] = [];
   for (const reservation of expired) {
-    const r = await releaseReservation(reservation.id, ReleaseReason.Timeout);
+    const r = await releaseReservation(reservation.id, ReleaseReason.Timeout, 'system');
     released.push(r);
   }
 

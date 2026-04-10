@@ -40,10 +40,10 @@
     <input
       type="search"
       bind:value={query}
-      placeholder="Search..."
+      placeholder="Search inventory..."
       on:focus={handleFocus}
       on:blur={handleBlur}
-      aria-label="Global search"
+      aria-label="Inventory search"
     />
   </form>
   {#if showHistory}

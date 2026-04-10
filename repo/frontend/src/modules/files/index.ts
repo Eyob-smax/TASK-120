@@ -22,6 +22,7 @@ export {
   getFile,
   getFiles,
   getTransferSession,
+  uploadNewVersion,
 } from './file.service';
 
 // Chunk scheduler
@@ -49,6 +50,8 @@ export {
   recycleBinStore,
   loadFiles,
   loadTransfers,
+  optimisticDeleteFile,
+  optimisticRestoreFile,
 } from './file.store';
 
 // Preview

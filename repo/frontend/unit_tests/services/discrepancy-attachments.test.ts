@@ -9,6 +9,7 @@ import {
   addAttachment,
   getDiscrepanciesByTask,
 } from '../../src/modules/orders/discrepancy.service';
+import { ChunkRepository } from '../../src/lib/db';
 import type { DiscrepancyAttachment } from '../../src/lib/types/orders';
 
 vi.mock('../../src/lib/security/auth.service', () => ({
@@ -89,5 +90,72 @@ describe('Discrepancy Attachments', () => {
     expect(results).toHaveLength(1);
     expect(results[0].attachments).toHaveLength(1);
     expect(results[0].attachments[0].name).toBe('evidence.png');
+  });
+});
+
+describe('Discrepancy Attachment Payload Persistence', () => {
+  const chunkRepo = new ChunkRepository();
+
+  beforeEach(async () => { await initDatabase(); });
+  afterEach(async () => { await resetDb(); });
+
+  it('attachment payload is stored in IndexedDB chunks and retrievable', async () => {
+    const fileId = crypto.randomUUID();
+    const payload = new TextEncoder().encode('photo binary data').buffer;
+    const now = new Date().toISOString();
+
+    // Store payload as a chunk (same pattern as DiscrepancyDrawer.filesToAttachments)
+    await chunkRepo.add({
+      id: crypto.randomUUID(),
+      fileId,
+      chunkIndex: 0,
+      data: payload,
+      size: payload.byteLength,
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+    });
+
+    // Report discrepancy with the attachment metadata linked to stored payload
+    const att: DiscrepancyAttachment = {
+      id: crypto.randomUUID(), discrepancyId: '', fileId,
+      type: 'image/png', name: 'evidence.png', addedAt: now,
+    };
+    const d = await reportDiscrepancy('task-payload', 'user-1', 'Missing item', [att]);
+
+    // Retrieve the attachment's payload from chunks
+    const chunks = await chunkRepo.getByFile(d.attachments[0].fileId);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].size).toBe(payload.byteLength);
+
+    // Verify the data content matches
+    const retrieved = new Uint8Array(chunks[0].data);
+    const original = new Uint8Array(payload);
+    expect(retrieved).toEqual(original);
+  });
+
+  it('multiple attachments each store separate payloads', async () => {
+    const fileId1 = crypto.randomUUID();
+    const fileId2 = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const data1 = new TextEncoder().encode('file one').buffer;
+    const data2 = new TextEncoder().encode('file two').buffer;
+
+    await chunkRepo.add({ id: crypto.randomUUID(), fileId: fileId1, chunkIndex: 0, data: data1, size: data1.byteLength, createdAt: now, updatedAt: now, version: 1 });
+    await chunkRepo.add({ id: crypto.randomUUID(), fileId: fileId2, chunkIndex: 0, data: data2, size: data2.byteLength, createdAt: now, updatedAt: now, version: 1 });
+
+    const atts: DiscrepancyAttachment[] = [
+      { id: crypto.randomUUID(), discrepancyId: '', fileId: fileId1, type: 'text/plain', name: 'a.txt', addedAt: now },
+      { id: crypto.randomUUID(), discrepancyId: '', fileId: fileId2, type: 'text/plain', name: 'b.txt', addedAt: now },
+    ];
+    const d = await reportDiscrepancy('task-multi', 'user-1', 'Two files', atts);
+    expect(d.attachments).toHaveLength(2);
+
+    const chunks1 = await chunkRepo.getByFile(fileId1);
+    const chunks2 = await chunkRepo.getByFile(fileId2);
+    expect(chunks1).toHaveLength(1);
+    expect(chunks2).toHaveLength(1);
+    expect(new TextDecoder().decode(chunks1[0].data)).toBe('file one');
+    expect(new TextDecoder().decode(chunks2[0].data)).toBe('file two');
   });
 });

@@ -7,6 +7,7 @@
   import { appStore } from '$lib/stores/app.store';
   import { logout, lock } from '$lib/security/auth.service';
   import { IdleLockMonitor } from '$lib/security/idle-monitor';
+  import { releaseExpiredReservations } from '$modules/orders';
   import { push, querystring } from 'svelte-spa-router';
   import NavRail from '$components/NavRail.svelte';
   import SearchBar from '$components/SearchBar.svelte';
@@ -18,17 +19,24 @@
   export let isFirstRun = false;
 
   const idleMonitor = new IdleLockMonitor();
+  let expiryInterval: ReturnType<typeof setInterval> | null = null;
 
   $: authenticated = $isAuthenticated;
   $: locked = $isLocked;
   $: appError = $appStore.error;
   $: appLoading = $appStore.loading;
 
-  // Start/stop idle monitor based on auth state
+  // Start/stop idle monitor and reservation expiry based on auth state
   $: if (authenticated) {
     idleMonitor.start(handleIdleLock);
+    if (!expiryInterval) {
+      expiryInterval = setInterval(async () => {
+        try { await releaseExpiredReservations(); } catch { /* background cleanup */ }
+      }, 60_000);
+    }
   } else {
     idleMonitor.stop();
+    if (expiryInterval) { clearInterval(expiryInterval); expiryInterval = null; }
   }
 
   function handleIdleLock() {
@@ -38,6 +46,7 @@
 
   function handleLogout() {
     idleMonitor.stop();
+    if (expiryInterval) { clearInterval(expiryInterval); expiryInterval = null; }
     logout();
     clearSession();
   }
@@ -55,12 +64,13 @@
   }
 
   function handleGlobalSearch(query: string) {
-    // Navigate to inventory with search query as hash parameter
+    // Inventory search only — routes to inventory page with query param
     push(`/inventory?q=${encodeURIComponent(query)}`);
   }
 
   onDestroy(() => {
     idleMonitor.stop();
+    if (expiryInterval) { clearInterval(expiryInterval); expiryInterval = null; }
   });
 </script>
 

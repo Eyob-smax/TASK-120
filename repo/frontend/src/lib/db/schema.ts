@@ -1,5 +1,5 @@
 export const DB_NAME = 'forgeops-offline';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export const STORE_NAMES = {
   USERS: 'users',
@@ -164,6 +164,7 @@ export const STORE_DEFINITIONS: StoreDefinition[] = [
     indexes: [
       { name: 'fileId', keyPath: 'fileId' },
       { name: 'chunkIndex', keyPath: 'chunkIndex' },
+      { name: 'versionId', keyPath: 'versionId' },
     ],
   },
   {

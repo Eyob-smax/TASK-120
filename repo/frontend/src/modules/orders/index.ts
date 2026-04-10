@@ -55,4 +55,6 @@ export {
   loadReservations,
   loadWaves,
   loadTasks,
+  optimisticCreateOrder,
+  optimisticCancelOrder,
 } from './order.store';

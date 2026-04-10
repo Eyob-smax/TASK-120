@@ -8,6 +8,7 @@ import {
   pauseTransfer,
   resumeTransfer,
   completeTransfer,
+  uploadNewVersion,
 } from '../../src/modules/files/file.service';
 import { ChunkScheduler } from '../../src/modules/files/chunk-scheduler';
 import { createVersion, rollbackToVersion, getVersionHistory } from '../../src/modules/files/version.service';
@@ -219,6 +220,119 @@ describe.skipIf(!hasWebCrypto)('ChunkScheduler', () => {
       await resetDb();
     }
   });
+
+  it('processChunk stores versionId on chunk when provided', async () => {
+    await initDatabase();
+    try {
+      const scheduler = new ChunkScheduler();
+      const chunk = await scheduler.processChunk(crypto.randomUUID(), 0, new ArrayBuffer(64), 'ver-xyz');
+      expect(chunk.versionId).toBe('ver-xyz');
+      const stored = await chunkRepo.getByVersion('ver-xyz');
+      expect(stored).toHaveLength(1);
+    } finally { await resetDb(); }
+  });
+
+  it('processChunk omits versionId when not provided', async () => {
+    await initDatabase();
+    try {
+      const scheduler = new ChunkScheduler();
+      const chunk = await scheduler.processChunk(crypto.randomUUID(), 0, new ArrayBuffer(64));
+      expect(chunk.versionId).toBeUndefined();
+    } finally { await resetDb(); }
+  });
+
+  it('scheduleChunks with versionId writes new chunks despite prior version chunks existing', async () => {
+    await initDatabase();
+    try {
+      const numChunks = 2;
+      const data1 = makeFileData(FILE_CHUNK_SIZE * numChunks);
+
+      // Ingest + v1 upload with version-tagged chunks
+      const { file, session: s1 } = await ingestFile('iso-test.bin', data1.byteLength, 'application/octet-stream', data1, 'u1');
+      const { version: v1 } = await createVersion(file.id, file.sha256, file.size, 'u1');
+      await new ChunkScheduler().scheduleChunks(s1!.id, data1, undefined, v1.id);
+      await completeTransfer(s1!.id);
+      expect(await chunkRepo.getByVersion(v1.id)).toHaveLength(numChunks);
+
+      // Upload v2 with different content — scheduler must NOT skip based on v1 chunks
+      const data2 = makeFileData(FILE_CHUNK_SIZE * numChunks + 16);
+      const { session: s2 } = await uploadNewVersion(file.id, data2, 'u1');
+      const { version: v2 } = await createVersion(file.id, await computeHash(data2), data2.byteLength, 'u1');
+      await new ChunkScheduler().scheduleChunks(s2!.id, data2, undefined, v2.id);
+
+      const numChunksV2 = Math.ceil(data2.byteLength / FILE_CHUNK_SIZE);
+      // v2 has its own isolated chunks
+      expect(await chunkRepo.getByVersion(v2.id)).toHaveLength(numChunksV2);
+      // v1 chunks are untouched
+      expect(await chunkRepo.getByVersion(v1.id)).toHaveLength(numChunks);
+    } finally { await resetDb(); }
+  });
+
+  it('currentVersionId resolves to correct chunk set after multi-version upload', async () => {
+    await initDatabase();
+    try {
+      const data1 = makeFileData(FILE_CHUNK_SIZE);
+      const { file, session: s1 } = await ingestFile('prev-test.bin', data1.byteLength, 'application/octet-stream', data1, 'u1');
+      const { version: v1 } = await createVersion(file.id, file.sha256, file.size, 'u1');
+      await new ChunkScheduler().scheduleChunks(s1!.id, data1, undefined, v1.id);
+      await completeTransfer(s1!.id);
+
+      const data2 = makeFileData(FILE_CHUNK_SIZE + 8);
+      const r2 = await uploadNewVersion(file.id, data2, 'u1');
+      const { version: v2 } = await createVersion(file.id, await computeHash(data2), data2.byteLength, 'u1');
+      await new ChunkScheduler().scheduleChunks(r2.session!.id, data2, undefined, v2.id);
+      await completeTransfer(r2.session!.id);
+
+      // File points to v2 after second createVersion call
+      const updatedFile = await fileRepo.getById(file.id);
+      expect(updatedFile?.currentVersionId).toBe(v2.id);
+
+      // Preview path: getByVersion(currentVersionId) returns v2 chunks only
+      const previewChunks = await chunkRepo.getByVersion(v2.id);
+      expect(previewChunks.length).toBeGreaterThan(0);
+      expect(previewChunks.every(c => c.versionId === v2.id)).toBe(true);
+
+      // v1 chunks still isolated
+      const v1Chunks = await chunkRepo.getByVersion(v1.id);
+      expect(v1Chunks.length).toBeGreaterThan(0);
+      expect(v1Chunks.every(c => c.versionId === v1.id)).toBe(true);
+    } finally { await resetDb(); }
+  });
+
+  it('resumed scheduleChunks completes version-tagged chunks without re-writing existing ones', async () => {
+    await initDatabase();
+    try {
+      // 6 chunks: with MAX_CONCURRENT=3, the pool fills and the loop hits
+      // the isPaused break before issuing all chunks, ensuring a true partial run.
+      const numChunks = 6;
+      const fileData = makeFileData(FILE_CHUNK_SIZE * numChunks);
+      const { file, session } = await ingestFile('resume-v.bin', fileData.byteLength, 'application/octet-stream', fileData, 'u1');
+      const { version: v1 } = await createVersion(file.id, file.sha256, file.size, 'u1');
+
+      // Partial first run: pause after 2 chunks
+      const sched1 = new ChunkScheduler();
+      let count = 0;
+      const origProcess = sched1.processChunk.bind(sched1);
+      vi.spyOn(sched1, 'processChunk').mockImplementation(async (fid, idx, data, vid) => {
+        const result = await origProcess(fid, idx, data, vid);
+        if (++count >= 2) sched1.pause();
+        return result;
+      });
+      await sched1.scheduleChunks(session!.id, fileData, undefined, v1.id);
+      await pauseTransfer(session!.id);
+
+      const partial = await chunkRepo.getByVersion(v1.id);
+      expect(partial.length).toBeGreaterThan(0);
+      expect(partial.length).toBeLessThan(numChunks);
+
+      // Resume with same versionId — only missing chunks are written
+      await resumeTransfer(session!.id);
+      await new ChunkScheduler().scheduleChunks(session!.id, fileData, undefined, v1.id);
+
+      const all = await chunkRepo.getByVersion(v1.id);
+      expect(all).toHaveLength(numChunks);
+    } finally { await resetDb(); }
+  });
 });
 
 describe('Version Service', () => {
@@ -254,13 +368,18 @@ describe('Version Service', () => {
     expect(history.length).toBeLessThanOrEqual(MAX_FILE_VERSIONS);
   });
 
-  it('rollback creates new version pointing to old content', async () => {
+  it('rollback points file currentVersionId to target version', async () => {
     const { version: v1 } = await createVersion('file-1', 'original-hash', 100, 'u1');
     await createVersion('file-1', 'updated-hash', 200, 'u1');
 
     const rolledBack = await rollbackToVersion('file-1', v1.id, 'u1');
+    // Returns the target version directly (no new version record created)
     expect(rolledBack.sha256).toBe('original-hash');
-    expect(rolledBack.versionNumber).toBe(3);
+    expect(rolledBack.versionNumber).toBe(1);
+
+    // File record currentVersionId now points to v1
+    const file = await fileRepo.getById('file-1');
+    expect(file?.currentVersionId).toBe(v1.id);
   });
 });
 
@@ -318,5 +437,40 @@ describe('Recycle Bin Service', () => {
     // File should be permanently deleted
     const file = await fileRepo.getById('file-1');
     expect(file).toBeUndefined();
+  });
+});
+
+describe('ChunkRepository version scoping', () => {
+  beforeEach(async () => { await initDatabase(); });
+  afterEach(async () => { await resetDb(); });
+
+  it('getByVersion returns only chunks with matching versionId', async () => {
+    const fileId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const base = { fileId, data: new ArrayBuffer(8), size: 8, createdAt: now, updatedAt: now, version: 1 as const };
+
+    await chunkRepo.add({ ...base, id: crypto.randomUUID(), chunkIndex: 0, versionId: 'v-a' });
+    await chunkRepo.add({ ...base, id: crypto.randomUUID(), chunkIndex: 1, versionId: 'v-a' });
+    await chunkRepo.add({ ...base, id: crypto.randomUUID(), chunkIndex: 0, versionId: 'v-b' });
+
+    expect(await chunkRepo.getByVersion('v-a')).toHaveLength(2);
+    expect(await chunkRepo.getByVersion('v-b')).toHaveLength(1);
+    expect(await chunkRepo.getByVersion('v-unknown')).toHaveLength(0);
+  });
+
+  it('getByFile still finds chunks that have no versionId (backward compat)', async () => {
+    const fileId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await chunkRepo.add({
+      id: crypto.randomUUID(), fileId, chunkIndex: 0,
+      data: new ArrayBuffer(4), size: 4, createdAt: now, updatedAt: now, version: 1,
+    });
+
+    const byFile = await chunkRepo.getByFile(fileId);
+    expect(byFile).toHaveLength(1);
+    expect(byFile[0].versionId).toBeUndefined();
+
+    // Legacy chunks have no versionId so getByVersion returns nothing
+    expect(await chunkRepo.getByVersion('any-id')).toHaveLength(0);
   });
 });

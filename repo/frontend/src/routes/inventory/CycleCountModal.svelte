@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import Modal from '$components/Modal.svelte';
-  import { cycleCount, loadInventory } from '$modules/inventory';
+  import { optimisticCycleCount } from '$modules/inventory';
 
   export let open = false;
 
@@ -20,10 +20,8 @@
     error = '';
     submitting = true;
     try {
-      const result = await cycleCount(binId, skuId, warehouseId, actualQty, notes || undefined);
-      await loadInventory();
-      const diff = result.ledgerEntry ? `(adjusted by ${result.ledgerEntry.quantity})` : '(no adjustment)';
-      toast?.addToast(`Cycle count recorded ${diff}`, 'success');
+      await optimisticCycleCount(binId, skuId, warehouseId, actualQty, notes || undefined);
+      toast?.addToast(`Cycle count recorded`, 'success');
       resetForm();
       open = false;
     } catch (e: any) {

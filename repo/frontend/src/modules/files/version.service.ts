@@ -79,26 +79,30 @@ export async function rollbackToVersion(
     ]);
   }
 
-  const { version } = await createVersion(
-    fileId,
-    targetVersion.sha256,
-    targetVersion.size,
-    createdBy,
-  );
+  // Point the file record directly at the target version so its existing chunks
+  // are served by preview. Creating a new version record would produce a UUID
+  // with no chunks, making the preview return empty after rollback.
+  const file = await fileRepo.getById(fileId);
+  if (file) {
+    await fileRepo.put({
+      ...file,
+      currentVersionId: targetVersionId,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   logger.info('Version rolled back', {
     fileId,
-    fromVersion: targetVersion.versionNumber,
-    newVersion: version.versionNumber,
+    toVersion: targetVersion.versionNumber,
   });
 
   try {
     await dispatchNotification(createdBy, NotificationType.FileVersionRollback, 'File Version Rolled Back',
       `File rolled back to version ${targetVersion.versionNumber}`,
-      { fileId, fromVersion: targetVersion.versionNumber, newVersion: version.versionNumber });
+      { fileId, toVersion: targetVersion.versionNumber });
   } catch { /* notification failure should not block rollback */ }
 
-  return version;
+  return targetVersion;
 }
 
 export async function getVersionHistory(fileId: string): Promise<FileVersion[]> {

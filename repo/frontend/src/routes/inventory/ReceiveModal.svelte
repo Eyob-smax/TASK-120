@@ -1,8 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import Modal from '$components/Modal.svelte';
-  import { receiveStock } from '$modules/inventory';
-  import { loadInventory } from '$modules/inventory';
+  import { optimisticReceive } from '$modules/inventory';
 
   export let open = false;
 
@@ -21,8 +20,7 @@
     error = '';
     submitting = true;
     try {
-      const result = await receiveStock(binId, skuId, warehouseId, quantity, notes || undefined);
-      await loadInventory();
+      await optimisticReceive(binId, skuId, warehouseId, quantity, notes || undefined);
       toast?.addToast(`Received ${quantity} units of ${skuId}`, 'success');
       resetForm();
       open = false;

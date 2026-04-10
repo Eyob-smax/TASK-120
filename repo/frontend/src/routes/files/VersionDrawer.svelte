@@ -3,6 +3,8 @@
   import Drawer from '$components/Drawer.svelte';
   import { getVersionHistory, rollbackToVersion } from '$modules/files';
   import { getCurrentSession } from '$lib/security/auth.service';
+  import { currentRole } from '$lib/stores/auth.store';
+  import { isReadOnly } from '$lib/security/permissions';
   import type { FileVersion } from '$lib/types/files';
 
   export let open = false;
@@ -50,9 +52,9 @@
             <span class="version-date">{new Date(v.createdAt).toLocaleString()}</span>
             <span class="version-size">{(v.size / 1024).toFixed(1)} KB</span>
           </div>
-          {#if i > 0}
+          {#if i > 0 && $currentRole && !isReadOnly($currentRole)}
             <button on:click={() => handleRollback(v.id, v.versionNumber)}>Rollback</button>
-          {:else}
+          {:else if i === 0}
             <span class="current-badge">Current</span>
           {/if}
         </li>

@@ -34,6 +34,10 @@ export class ChunkRepository extends Repository<FileChunk> {
   async getByFile(fileId: string): Promise<FileChunk[]> {
     return this.getByIndex('fileId', fileId);
   }
+
+  async getByVersion(versionId: string): Promise<FileChunk[]> {
+    return this.getByIndex('versionId', versionId);
+  }
 }
 
 export class TransferSessionRepository extends Repository<TransferSession> {

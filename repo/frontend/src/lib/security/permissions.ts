@@ -18,10 +18,10 @@ export const ROUTE_ACCESS: Record<string, UserRole[]> = {
   '/inventory/ledger': [Administrator, WarehouseManager, Auditor],
   '/orders': [Administrator, WarehouseManager, PickerPacker],
   '/orders/waves': [Administrator, WarehouseManager, PickerPacker],
-  '/files': [Administrator, WarehouseManager],
+  '/files': [Administrator, WarehouseManager, Auditor],
   '/identity': [Administrator],
   '/notifications': ALL_ROLES,
-  '/settings': ALL_ROLES,
+  '/settings': [Administrator],
 };
 
 export const MUTATION_ACCESS: Record<string, UserRole[]> = {

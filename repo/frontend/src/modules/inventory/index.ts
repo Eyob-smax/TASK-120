@@ -24,4 +24,8 @@ export {
   loadInventory,
   loadLedger,
   setAlerts,
+  optimisticReceive,
+  optimisticShip,
+  optimisticTransfer,
+  optimisticCycleCount,
 } from './inventory.store';

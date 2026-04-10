@@ -10,7 +10,9 @@
   } from '$modules/orders';
   import { DiscrepancyState } from '$lib/types/enums';
   import type { Discrepancy, DiscrepancyAttachment } from '$lib/types/orders';
-  import { getCurrentSession } from '$lib/security/auth.service';
+  import { getCurrentSession, getCurrentDEK } from '$lib/security/auth.service';
+  import { encryptBinary, decryptBinary, uint8ArrayToBase64, base64ToUint8Array } from '$lib/security/crypto';
+  import { ChunkRepository } from '$lib/db';
 
   export let open = false;
   export let taskId = '';
@@ -26,16 +28,79 @@
   let reportFileInput: HTMLInputElement;
   let verifyFileInput: HTMLInputElement;
 
-  function filesToAttachments(files: FileList | null, discrepancyId: string): DiscrepancyAttachment[] {
+  const chunkRepo = new ChunkRepository();
+
+  async function filesToAttachments(files: FileList | null, discrepancyId: string): Promise<DiscrepancyAttachment[]> {
     if (!files) return [];
-    return Array.from(files).map(f => ({
-      id: crypto.randomUUID(),
-      discrepancyId,
-      fileId: crypto.randomUUID(),
-      type: f.type || 'application/octet-stream',
-      name: f.name,
-      addedAt: new Date().toISOString(),
-    }));
+    const attachments: DiscrepancyAttachment[] = [];
+    const now = new Date().toISOString();
+    const dek = getCurrentDEK();
+
+    for (const f of Array.from(files)) {
+      const fileId = crypto.randomUUID();
+      const data = await f.arrayBuffer();
+
+      // Encrypt payload if DEK is available
+      let storedData: ArrayBuffer = data;
+      let iv: string | undefined;
+      if (dek) {
+        const encrypted = await encryptBinary(data, dek);
+        storedData = encrypted.ciphertext;
+        iv = uint8ArrayToBase64(encrypted.iv);
+      }
+
+      await chunkRepo.add({
+        id: crypto.randomUUID(),
+        fileId,
+        chunkIndex: 0,
+        data: storedData,
+        size: data.byteLength,
+        iv,
+        createdAt: now,
+        updatedAt: now,
+        version: 1,
+      });
+
+      attachments.push({
+        id: crypto.randomUUID(),
+        discrepancyId,
+        fileId,
+        type: f.type || 'application/octet-stream',
+        name: f.name,
+        addedAt: now,
+      });
+    }
+
+    return attachments;
+  }
+
+  async function downloadAttachment(att: DiscrepancyAttachment) {
+    const chunks = await chunkRepo.getByFile(att.fileId);
+    if (chunks.length === 0) return;
+    const sorted = chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
+    const totalSize = sorted.reduce((sum, c) => sum + c.size, 0);
+    const buffer = new ArrayBuffer(totalSize);
+    const view = new Uint8Array(buffer);
+    let offset = 0;
+    const dek = getCurrentDEK();
+    for (const chunk of sorted) {
+      let chunkData: ArrayBuffer;
+      if (chunk.iv && dek) {
+        const ivBytes = base64ToUint8Array(chunk.iv);
+        chunkData = await decryptBinary(chunk.data, ivBytes, dek);
+      } else {
+        chunkData = chunk.data;
+      }
+      view.set(new Uint8Array(chunkData), offset);
+      offset += chunk.size;
+    }
+    const blob = new Blob([buffer], { type: att.type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = att.name;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   $: if (open && taskId) loadDiscrepancies();
@@ -47,7 +112,7 @@
   async function handleReport() {
     error = '';
     try {
-      const attachments = filesToAttachments(reportFiles, '');
+      const attachments = await filesToAttachments(reportFiles, '');
       await reportDiscrepancy(taskId, getCurrentSession()?.userId ?? 'unknown', description, attachments);
       description = '';
       reportFiles = null;
@@ -67,7 +132,7 @@
   async function handleVerify(id: string) {
     error = '';
     try {
-      const attachments = filesToAttachments(verifyFiles, id);
+      const attachments = await filesToAttachments(verifyFiles, id);
       await verifyDiscrepancy(id, getCurrentSession()?.userId ?? 'unknown', verificationNotes || 'Verified', attachments);
       verificationNotes = '';
       verifyFiles = null;
@@ -123,7 +188,7 @@
           <div class="attachment-list">
             <span class="attachment-label">Attachments:</span>
             {#each d.attachments as att}
-              <span class="attachment-chip">{att.name}</span>
+              <button class="attachment-chip" on:click={() => downloadAttachment(att)} title="Download {att.name}">{att.name}</button>
             {/each}
           </div>
         {/if}
@@ -159,7 +224,7 @@
   .file-chip { font-size: 0.75rem; padding: 2px 6px; background: #eff6ff; border-radius: var(--radius-sm); color: var(--color-primary); }
   .attachment-list { margin-top: var(--spacing-xs); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
   .attachment-label { font-size: 0.75rem; font-weight: 600; color: var(--color-muted); }
-  .attachment-chip { font-size: 0.75rem; padding: 2px 6px; background: #f3f4f6; border-radius: var(--radius-sm); }
+  .attachment-chip { font-size: 0.75rem; padding: 2px 6px; background: #f3f4f6; border-radius: var(--radius-sm); border: 1px solid var(--color-border); cursor: pointer; color: var(--color-primary); text-decoration: underline; }
   h4 { font-size: 0.85rem; margin-bottom: var(--spacing-xs); }
   .disc-card { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
   .disc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs); }

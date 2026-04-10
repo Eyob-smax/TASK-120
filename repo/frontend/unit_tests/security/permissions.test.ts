@@ -22,6 +22,16 @@ describe('Permissions', () => {
       expect(canAccess(Auditor, '/inventory/ledger')).toBe(true);
     });
 
+    it('Auditor can access /files (read-only)', () => {
+      expect(canAccess(Auditor, '/files')).toBe(true);
+    });
+
+    it('Auditor cannot mutate files', () => {
+      expect(canMutate(Auditor, 'files.upload')).toBe(false);
+      expect(canMutate(Auditor, 'files.delete')).toBe(false);
+      expect(canMutate(Auditor, 'files.restore')).toBe(false);
+    });
+
     it('PickerPacker cannot access /files', () => {
       expect(canAccess(PickerPacker, '/files')).toBe(false);
     });

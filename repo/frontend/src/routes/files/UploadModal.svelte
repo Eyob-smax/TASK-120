@@ -69,11 +69,15 @@
           scheduler.setBandwidthCap(savedCap);
         }
 
+        // Create the version record first so chunks can be tagged with its id.
+        // This must happen before scheduleChunks to ensure version-scoped deduplication.
+        const { version } = await createVersion(result.file.id, result.file.sha256, result.file.size, userId);
+
         await scheduler.scheduleChunks(result.session.id, buffer, (completed, total) => {
           completedChunks = completed;
           totalChunks = total;
           progress = Math.round((completed / total) * 100);
-        });
+        }, version.id);
 
         // If paused mid-upload, don't complete — user can resume from Files page
         if (paused) {
@@ -87,9 +91,6 @@
 
         // Complete the transfer session
         await completeTransfer(result.session.id);
-
-        // Create first version
-        await createVersion(result.file.id, result.file.sha256, result.file.size, userId);
       }
 
       toast?.addToast(`File "${selectedFile.name}" uploaded (${totalChunks} chunks)`, 'success');

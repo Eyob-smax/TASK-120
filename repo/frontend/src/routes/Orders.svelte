@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount, onDestroy, getContext } from 'svelte';
+  import { onMount, getContext } from 'svelte';
   import PageHeader from '$components/PageHeader.svelte';
   import DataTable from '$components/DataTable.svelte';
-  import { orderStore, loadOrders, cancelOrder, releaseExpiredReservations, updateOrderActivity } from '$modules/orders';
+  import { orderStore, loadOrders, optimisticCancelOrder, releaseExpiredReservations, updateOrderActivity } from '$modules/orders';
   import { currentRole } from '$lib/stores/auth.store';
   import { canMutate } from '$lib/security/permissions';
   import CreateOrderDrawer from './orders/CreateOrderDrawer.svelte';
@@ -11,24 +11,10 @@
 
   let loading = true;
   let showCreate = false;
-  let expiryInterval: ReturnType<typeof setInterval>;
 
   onMount(async () => {
     await loadOrders();
     loading = false;
-
-    // Periodic reservation expiry check every 60 seconds during active session
-    expiryInterval = setInterval(async () => {
-      const released = await releaseExpiredReservations();
-      if (released.length > 0) {
-        await loadOrders();
-        toast?.addToast(`Auto-released ${released.length} expired reservations`, 'info');
-      }
-    }, 60_000);
-  });
-
-  onDestroy(() => {
-    if (expiryInterval) clearInterval(expiryInterval);
   });
 
   $: role = $currentRole;
@@ -43,8 +29,7 @@
 
   async function handleCancel(orderId: string) {
     try {
-      await cancelOrder(orderId);
-      await loadOrders();
+      await optimisticCancelOrder(orderId);
       toast?.addToast('Order cancelled, reservations released', 'success');
     } catch (e: any) {
       toast?.addToast(e.message || 'Cancel failed', 'error');

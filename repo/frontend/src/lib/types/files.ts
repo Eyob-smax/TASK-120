@@ -9,6 +9,7 @@ export interface FileRecord extends BaseEntity {
   currentVersionId: string;
   createdBy: string;
   isDeleted: boolean;
+  encryptedWithDEK?: boolean;
 }
 
 export interface FileChunk extends BaseEntity {
@@ -16,6 +17,8 @@ export interface FileChunk extends BaseEntity {
   chunkIndex: number;
   data: ArrayBuffer;
   size: number;
+  iv?: string;
+  versionId?: string;
 }
 
 export interface TransferSession extends BaseEntity {

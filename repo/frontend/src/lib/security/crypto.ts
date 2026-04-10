@@ -167,3 +167,30 @@ export async function decrypt(
   );
   return decoder.decode(plaintext);
 }
+
+// --- Binary AES-GCM encrypt/decrypt (for file chunks) ---
+
+export async function encryptBinary(
+  data: ArrayBuffer,
+  key: CryptoKey,
+): Promise<{ ciphertext: ArrayBuffer; iv: Uint8Array }> {
+  const iv = crypto.getRandomValues(new Uint8Array(AES_IV_LENGTH));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data,
+  );
+  return { ciphertext, iv };
+}
+
+export async function decryptBinary(
+  ciphertext: ArrayBuffer,
+  iv: Uint8Array,
+  key: CryptoKey,
+): Promise<ArrayBuffer> {
+  return crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext,
+  );
+}

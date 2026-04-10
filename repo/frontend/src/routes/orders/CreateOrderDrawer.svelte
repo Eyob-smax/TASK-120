@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte';
   import Drawer from '$components/Drawer.svelte';
-  import { createOrder, loadOrders } from '$modules/orders';
+  import { optimisticCreateOrder } from '$modules/orders';
   import type { OrderLine } from '$lib/types/orders';
 
   export let open = false;
@@ -27,8 +27,7 @@
         binId: l.binId,
         quantity: l.quantity,
       }));
-      await createOrder({ lines: orderLines, notes: notes || undefined });
-      await loadOrders();
+      await optimisticCreateOrder({ lines: orderLines, notes: notes || undefined });
       toast?.addToast('Order created with stock reservations', 'success');
       resetForm();
       open = false;

@@ -29,7 +29,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     testTimeout: 30_000,
-    include: ['unit_tests/**/*.test.ts', 'unit_tests/**/*.spec.ts', 'e2e_tests/**/*.test.ts'],
+    include: ['unit_tests/**/*.test.ts', 'unit_tests/**/*.spec.ts', 'integration_tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',

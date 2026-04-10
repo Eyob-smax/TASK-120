@@ -55,12 +55,16 @@ describe('Version Drawer Workflows', () => {
     expect(history[0].versionNumber).toBeGreaterThan(history[1].versionNumber);
   });
 
-  it('rollback creates new version with old content', async () => {
+  it('rollback updates file currentVersionId to target version', async () => {
     const { version: v1 } = await createVersion('f1', 'original', 100, 'u1');
     await createVersion('f1', 'updated', 200, 'u1');
     const rolledBack = await rollbackToVersion('f1', v1.id, 'u1');
+    // Returns target version directly — no new version record is created
     expect(rolledBack.sha256).toBe('original');
-    expect(rolledBack.versionNumber).toBe(3);
+    expect(rolledBack.versionNumber).toBe(1);
+    // File pointer now aims at the target version whose chunks exist
+    const file = await fileRepo.getById('f1');
+    expect(file?.currentVersionId).toBe(v1.id);
   });
 });
 

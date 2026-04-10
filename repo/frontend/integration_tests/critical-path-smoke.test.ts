@@ -1,12 +1,12 @@
 /**
- * Critical-path E2E smoke test
+ * Critical-path integration smoke test
  *
  * Exercises the full happy-path flow through the service layer:
  *   login → create order → plan wave → assign task → report discrepancy →
  *   review → verify → notification dispatch evidence
  *
  * Runs in jsdom/fake-indexeddb (no real browser). This validates that all
- * service-layer modules compose correctly end-to-end.
+ * service-layer modules compose correctly as an integration test.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import 'fake-indexeddb/auto';
@@ -50,7 +50,7 @@ vi.mock('../src/lib/security/auth.service', () => ({
   getCurrentDEK: () => null,
 }));
 
-describe('Critical-path E2E smoke: Order → Wave → Discrepancy → Notifications', () => {
+describe('Critical-path integration smoke: Order → Wave → Discrepancy → Notifications', () => {
   beforeEach(async () => {
     await initDatabase();
     await seedDefaultTemplates();

@@ -13,21 +13,21 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": ".",
     "paths": {
-      "$app/*": ["src/app/*"],
-      "$routes/*": ["src/routes/*"],
-      "$components/*": ["src/components/*"],
-      "$modules/*": ["src/modules/*"],
-      "$lib/*": ["src/lib/*"],
-      "$styles/*": ["src/styles/*"]
+      "$app/*": ["./src/app/*"],
+      "$routes/*": ["./src/routes/*"],
+      "$components/*": ["./src/components/*"],
+      "$modules/*": ["./src/modules/*"],
+      "$lib/*": ["./src/lib/*"],
+      "$styles/*": ["./src/styles/*"]
     },
     "types": ["svelte", "vitest/globals"]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.svelte",
-    "unit_tests/**/*.ts"
+    "unit_tests/**/*.ts",
+    "integration_tests/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

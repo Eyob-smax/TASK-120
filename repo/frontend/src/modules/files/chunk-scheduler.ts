@@ -4,6 +4,8 @@ import { ValidationServiceError } from '$lib/services/errors';
 import { createLogger } from '$lib/logging';
 import { FILE_CHUNK_SIZE, MAX_CONCURRENT_CHUNKS, DEFAULT_BANDWIDTH_CAP } from '$lib/constants';
 import { TransferState } from '$lib/types/enums';
+import { getCurrentDEK } from '$lib/security/auth.service';
+import { encryptBinary, uint8ArrayToBase64 } from '$lib/security/crypto';
 import type { FileChunk, TransferSession, BandwidthConfig } from '$lib/types/files';
 
 const chunkRepo = new ChunkRepository();
@@ -37,6 +39,7 @@ export class ChunkScheduler {
     sessionId: string,
     fileData: ArrayBuffer,
     onProgress?: (completed: number, total: number) => void,
+    versionId?: string,
   ): Promise<void> {
     const session = await transferRepo.getById(sessionId);
     if (!session) throw new ValidationServiceError('Session not found', [
@@ -51,7 +54,11 @@ export class ChunkScheduler {
     });
 
     const totalChunks = session.totalChunks;
-    const existingChunks = await chunkRepo.getByFile(session.fileId);
+    // When a versionId is provided, scope deduplication to that version's chunks only.
+    // This prevents prior version chunks from falsely marking indices as complete.
+    const existingChunks = versionId
+      ? await chunkRepo.getByVersion(versionId)
+      : await chunkRepo.getByFile(session.fileId);
     const completedIndices = new Set(existingChunks.map(c => c.chunkIndex));
 
     const pendingIndices: number[] = [];
@@ -82,7 +89,7 @@ export class ChunkScheduler {
           throw new ValidationServiceError('Invalid chunk', sizeValidation.errors);
         }
 
-        await this.processChunk(session.fileId, index, chunkData);
+        await this.processChunk(session.fileId, index, chunkData, versionId);
         completed++;
 
         // Update session progress
@@ -127,14 +134,29 @@ export class ChunkScheduler {
     fileId: string,
     chunkIndex: number,
     data: ArrayBuffer,
+    versionId?: string,
   ): Promise<FileChunk> {
     const now = new Date().toISOString();
+
+    // Encrypt chunk data with the user's DEK if available
+    let storedData: ArrayBuffer = data;
+    let iv: string | undefined;
+
+    const dek = getCurrentDEK();
+    if (dek) {
+      const encrypted = await encryptBinary(data, dek);
+      storedData = encrypted.ciphertext;
+      iv = uint8ArrayToBase64(encrypted.iv);
+    }
+
     const chunk: FileChunk = {
       id: crypto.randomUUID(),
       fileId,
       chunkIndex,
-      data,
+      data: storedData,
       size: data.byteLength,
+      iv,
+      versionId,
       createdAt: now,
       updatedAt: now,
       version: 1,

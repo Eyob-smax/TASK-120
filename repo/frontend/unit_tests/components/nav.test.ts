@@ -30,9 +30,9 @@ describe('NavRail visibility by role', () => {
     expect(items).toContain('/notifications');
   });
 
-  it('Auditor does not see /files', () => {
+  it('Auditor sees /files (read-only access to versions)', () => {
     const items = getNavItemsForRole(Auditor);
-    expect(items).not.toContain('/files');
+    expect(items).toContain('/files');
   });
 
   it('Auditor does not see /orders', () => {
@@ -61,5 +61,15 @@ describe('NavRail visibility by role', () => {
     expect(items).toContain('/orders');
     expect(items).toContain('/files');
     expect(items).not.toContain('/identity');
+  });
+
+  it('Auditor does not see /settings', () => {
+    const items = getNavItemsForRole(Auditor);
+    expect(items).not.toContain('/settings');
+  });
+
+  it('PickerPacker does not see /settings', () => {
+    const items = getNavItemsForRole(PickerPacker);
+    expect(items).not.toContain('/settings');
   });
 });
