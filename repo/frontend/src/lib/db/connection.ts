@@ -1,5 +1,5 @@
-import { openDB, type IDBPDatabase } from 'idb';
-import { DB_NAME, DB_VERSION, STORE_DEFINITIONS, STORE_NAMES } from './schema';
+import { openDB, type IDBPDatabase } from "idb";
+import { DB_NAME, DB_VERSION, STORE_DEFINITIONS, STORE_NAMES } from "./schema";
 
 let db: IDBPDatabase | null = null;
 
@@ -21,10 +21,13 @@ export async function initDatabase(): Promise<IDBPDatabase> {
       }
 
       // v2 → v3: add versionId index to existing CHUNKS store
-      if (oldVersion < 3 && database.objectStoreNames.contains(STORE_NAMES.CHUNKS)) {
+      if (
+        oldVersion < 3 &&
+        database.objectStoreNames.contains(STORE_NAMES.CHUNKS)
+      ) {
         const chunksStore = transaction.objectStore(STORE_NAMES.CHUNKS);
-        if (!chunksStore.indexNames.contains('versionId')) {
-          chunksStore.createIndex('versionId', 'versionId');
+        if (!chunksStore.indexNames.contains("versionId")) {
+          chunksStore.createIndex("versionId", "versionId");
         }
       }
     },
@@ -35,7 +38,7 @@ export async function initDatabase(): Promise<IDBPDatabase> {
 
 export function getDb(): IDBPDatabase {
   if (!db) {
-    throw new Error('Database not initialized. Call initDatabase() first.');
+    throw new Error("Database not initialized. Call initDatabase() first.");
   }
   return db;
 }
