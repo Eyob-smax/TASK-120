@@ -12,15 +12,16 @@ import type { SafetyStockAlert } from '../../src/lib/types/inventory';
 
 describe('Presentational Components', () => {
   describe('LoadingSpinner', () => {
-    it('renders the default message with role=status', () => {
-      const { getByRole, getByText } = render(LoadingSpinner);
-      expect(getByRole('status')).toBeTruthy();
-      expect(getByText('Loading...')).toBeTruthy();
+    it('renders spinner div with role=status and default message', () => {
+      const { getByRole, container } = render(LoadingSpinner);
+      expect(getByRole('status')).not.toBeNull();
+      expect(container.querySelector('.spinner')).not.toBeNull();
+      expect(container.querySelector('p')?.textContent).toBe('Loading...');
     });
 
-    it('renders a custom message', () => {
-      const { getByText } = render(LoadingSpinner, { props: { message: 'Fetching data' } });
-      expect(getByText('Fetching data')).toBeTruthy();
+    it('renders a custom message in the paragraph', () => {
+      const { container } = render(LoadingSpinner, { props: { message: 'Fetching data' } });
+      expect(container.querySelector('p')?.textContent).toBe('Fetching data');
     });
 
     it('hides paragraph when message is empty', () => {
@@ -30,9 +31,11 @@ describe('Presentational Components', () => {
   });
 
   describe('EmptyState', () => {
-    it('renders the default message', () => {
-      const { getByText } = render(EmptyState);
-      expect(getByText('No data available')).toBeTruthy();
+    it('renders the default message and icon placeholder', () => {
+      const { container } = render(EmptyState);
+      expect(container.querySelector('.empty-state')).not.toBeNull();
+      expect(container.querySelector('.empty-icon')?.textContent).toBe('--');
+      expect(container.querySelector('p')?.textContent).toBe('No data available');
     });
 
     it('hides action button when actionLabel is empty', () => {
@@ -40,9 +43,11 @@ describe('Presentational Components', () => {
       expect(container.querySelector('button')).toBeNull();
     });
 
-    it('renders action button when actionLabel is set', () => {
-      const { getByRole } = render(EmptyState, { props: { message: 'x', actionLabel: 'Add new' } });
-      expect(getByRole('button')).toBeTruthy();
+    it('renders action button with the correct label text', () => {
+      const { container } = render(EmptyState, { props: { message: 'x', actionLabel: 'Add new' } });
+      const btn = container.querySelector('button');
+      expect(btn).not.toBeNull();
+      expect(btn?.textContent?.trim()).toBe('Add new');
     });
   });
 
@@ -75,9 +80,11 @@ describe('Presentational Components', () => {
   });
 
   describe('PageHeader', () => {
-    it('renders the title', () => {
-      const { getByText } = render(PageHeader, { props: { title: 'My Page' } });
-      expect(getByText('My Page')).toBeTruthy();
+    it('renders title in an h2 element', () => {
+      const { container } = render(PageHeader, { props: { title: 'My Page' } });
+      const h2 = container.querySelector('h2');
+      expect(h2).not.toBeNull();
+      expect(h2?.textContent).toBe('My Page');
     });
   });
 
@@ -115,9 +122,13 @@ describe('Presentational Components', () => {
       expect(container.querySelector('[role="alert"]')).toBeNull();
     });
 
-    it('renders alert count in header', () => {
-      const { getByText } = render(AlertBanner, { props: { alerts: [mkAlert('a'), mkAlert('b')] } });
-      expect(getByText(/Low Stock Alert \(2\)/)).toBeTruthy();
+    it('renders alert count and SKU ids in list items', () => {
+      const { container } = render(AlertBanner, { props: { alerts: [mkAlert('a'), mkAlert('b')] } });
+      expect(container.querySelector('strong')?.textContent).toContain('Low Stock Alert (2)');
+      const items = container.querySelectorAll('li');
+      expect(items.length).toBe(2);
+      expect(items[0].textContent).toContain('SKU a');
+      expect(items[1].textContent).toContain('SKU b');
     });
 
     it('shows up to 5 alerts and "more" overflow line for extras', () => {
@@ -135,13 +146,13 @@ describe('Presentational Components', () => {
 
   describe('FilterChip', () => {
     it('renders label only when value is empty', () => {
-      const { getByText } = render(FilterChip, { props: { label: 'Status' } });
-      expect(getByText('Status')).toBeTruthy();
+      const { container } = render(FilterChip, { props: { label: 'Status' } });
+      expect(container.querySelector('.chip-text')?.textContent).toBe('Status');
     });
 
     it('renders "label: value" when value provided', () => {
-      const { getByText } = render(FilterChip, { props: { label: 'Zone', value: 'A1' } });
-      expect(getByText('Zone: A1')).toBeTruthy();
+      const { container } = render(FilterChip, { props: { label: 'Zone', value: 'A1' } });
+      expect(container.querySelector('.chip-text')?.textContent).toBe('Zone: A1');
     });
 
     it('dispatches remove event when X button clicked', async () => {
@@ -154,10 +165,13 @@ describe('Presentational Components', () => {
   });
 
   describe('NotFound route', () => {
-    it('renders 404 heading and dashboard link', () => {
-      const { getByText } = render(NotFound);
-      expect(getByText('404')).toBeTruthy();
-      expect(getByText('Return to Dashboard')).toBeTruthy();
+    it('renders 404 heading, message, and link to dashboard', () => {
+      const { container } = render(NotFound);
+      expect(container.querySelector('h1')?.textContent).toBe('404');
+      expect(container.querySelector('p')?.textContent).toBe('Page not found');
+      const link = container.querySelector('a');
+      expect(link?.textContent).toBe('Return to Dashboard');
+      expect(link?.getAttribute('href')).toMatch(/\/?#?\/dashboard/);
     });
   });
 });

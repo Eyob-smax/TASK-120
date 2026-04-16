@@ -7,8 +7,6 @@ import { TransferState } from '../../src/lib/types/enums';
 import { FILE_CHUNK_SIZE, DEFAULT_BANDWIDTH_CAP } from '../../src/lib/constants';
 import { generateDataKey } from '../../src/lib/security/crypto';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
 let dek: CryptoKey | null = null;
 vi.mock('../../src/lib/security/auth.service', () => ({
   getCurrentSession: () => ({
@@ -170,7 +168,7 @@ describe('ChunkScheduler', () => {
     });
   });
 
-  describe.skipIf(!hasWebCrypto)('processChunk encryption', () => {
+  describe('processChunk encryption', () => {
     it('does not encrypt when no DEK is available', async () => {
       dek = null;
       const s = new ChunkScheduler();

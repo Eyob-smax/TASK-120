@@ -22,16 +22,23 @@ describe('Login.svelte', () => {
     vi.clearAllMocks();
   });
 
-  it('renders username and password inputs', () => {
+  it('renders inputs with proper attributes (required, autocomplete)', () => {
     const { container } = render(Login);
-    expect(container.querySelector('input[type="text"]')).toBeTruthy();
-    expect(container.querySelector('input[type="password"]')).toBeTruthy();
+    const usernameInput = container.querySelector('input[autocomplete="username"]') as HTMLInputElement;
+    const passwordInput = container.querySelector('input[autocomplete="current-password"]') as HTMLInputElement;
+    expect(usernameInput).not.toBeNull();
+    expect(usernameInput.hasAttribute('required')).toBe(true);
+    expect(passwordInput).not.toBeNull();
+    expect(passwordInput.hasAttribute('required')).toBe(true);
+    expect(passwordInput.type).toBe('password');
   });
 
-  it('renders Sign In button initially (not first-run)', () => {
-    const { getByText } = render(Login);
-    // Default subtitle reflects the non-first-run branch
-    expect(getByText('Sign in to continue')).toBeTruthy();
+  it('renders Sign In subtitle and submit button in non-first-run mode', () => {
+    const { container } = render(Login);
+    expect(container.querySelector('.subtitle')?.textContent).toContain('Sign in to continue');
+    const submitBtn = container.querySelector('button[type="submit"]') as HTMLButtonElement;
+    expect(submitBtn).not.toBeNull();
+    expect(submitBtn.textContent?.trim()).toBe('Sign In');
   });
 
   it('shows error when login fails', async () => {

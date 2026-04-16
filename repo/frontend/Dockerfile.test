@@ -5,5 +5,7 @@ FROM node:20-alpine
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --include=dev
+# Fail build if WebCrypto is unavailable — tests require it and must never silently skip
+RUN node -e "if(!globalThis.crypto?.subtle){console.error('WebCrypto not available');process.exit(1)}"
 COPY . .
 CMD ["npm", "run", "test"]

@@ -11,9 +11,7 @@ import {
 import { Repository, STORE_NAMES } from '../../src/lib/db';
 import type { User } from '../../src/lib/types/auth';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
-describe.skipIf(!hasWebCrypto)('auth.service unlock error branches', () => {
+describe('auth.service unlock error branches', () => {
   beforeEach(async () => {
     await initDatabase();
   });

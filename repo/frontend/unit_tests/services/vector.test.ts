@@ -8,8 +8,6 @@ import {
 } from '../../src/modules/identity/vector.service';
 import { generateDataKey } from '../../src/lib/security/crypto';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
 let dek: CryptoKey | null = null;
 vi.mock('../../src/lib/security/auth.service', () => ({
   getCurrentSession: () => ({
@@ -77,7 +75,7 @@ describe('Vector Service', () => {
     });
   });
 
-  describe.skipIf(!hasWebCrypto)('encryptAndStore', () => {
+  describe('encryptAndStore', () => {
     beforeEach(async () => {
       await initDatabase();
       dek = await generateDataKey();

@@ -32,6 +32,7 @@ export default defineConfig({
     include: ['unit_tests/**/*.test.ts', 'unit_tests/**/*.spec.ts', 'integration_tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'text-summary', 'json-summary'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts', 'src/**/*.svelte'],
       exclude: ['src/**/*.d.ts', 'src/**/index.ts'],

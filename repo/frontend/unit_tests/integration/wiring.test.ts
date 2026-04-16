@@ -38,8 +38,6 @@ vi.mock('../../src/lib/security/auth.service', () => ({
   getCurrentDEK: () => null,
 }));
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
 describe('End-to-End Wiring: Order → Reserve → Cancel', () => {
   beforeEach(async () => { await initDatabase(); });
   afterEach(async () => { await resetDb(); });
@@ -111,7 +109,7 @@ describe('End-to-End Wiring: Wave → Task → Discrepancy → Packing Gate', ()
   });
 });
 
-describe.skipIf(!hasWebCrypto)('End-to-End Wiring: File Upload → Chunks → Version', () => {
+describe('End-to-End Wiring: File Upload → Chunks → Version', () => {
   beforeEach(async () => { await initDatabase(); });
   afterEach(async () => { await resetDb(); });
 

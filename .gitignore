@@ -33,6 +33,7 @@ repo/frontend/.svelte-kit/
 repo/frontend/.vite/
 repo/frontend/.vitest/
 repo/frontend/coverage/
+!repo/frontend/coverage/coverage-summary.json
 
 # Local workspace artifacts
 .claude/

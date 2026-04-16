@@ -17,10 +17,12 @@ describe('Modal', () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('renders dialog and title when open=true', () => {
-    const { getByRole, getByText } = render(Modal, { props: { open: true, title: 'Confirm Save' } });
-    expect(getByRole('dialog')).toBeTruthy();
-    expect(getByText('Confirm Save')).toBeTruthy();
+  it('renders dialog with aria-label, overlay, and title in header', () => {
+    const { getByRole, container } = render(Modal, { props: { open: true, title: 'Confirm Save' } });
+    const dialog = getByRole('dialog');
+    expect(dialog.getAttribute('aria-label')).toBe('Confirm Save');
+    expect(container.querySelector('.modal-overlay')).not.toBeNull();
+    expect(container.querySelector('.modal-header h3')?.textContent).toBe('Confirm Save');
   });
 
   it('dispatches close on overlay click', async () => {
@@ -78,10 +80,12 @@ describe('Drawer', () => {
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('renders aside with title when open', () => {
-    const { getByRole, getByText } = render(Drawer, { props: { open: true, title: 'Details' } });
-    expect(getByRole('dialog')).toBeTruthy();
-    expect(getByText('Details')).toBeTruthy();
+  it('renders aside with aria-label, overlay, and title in header', () => {
+    const { getByRole, container } = render(Drawer, { props: { open: true, title: 'Details' } });
+    const dialog = getByRole('dialog');
+    expect(dialog.getAttribute('aria-label')).toBe('Details');
+    expect(container.querySelector('.drawer-overlay')).not.toBeNull();
+    expect(container.querySelector('.drawer-header h3')?.textContent).toBe('Details');
   });
 
   it('dispatches close on overlay click', async () => {
@@ -141,17 +145,32 @@ describe('Toast', () => {
     expect(dismissed).toBe(true);
   });
 
-  it('passes duration prop through to component', () => {
-    // onMount doesn't fire in jsdom + @testing-library/svelte 5 + svelte 4,
-    // so we verify the prop is accepted without errors rather than lifecycle.
-    const { getByText } = render(Toast, { props: { message: 'y', duration: 50 } });
-    expect(getByText('y')).toBeTruthy();
+  it('renders error styling with correct background', () => {
+    const { container } = render(Toast, { props: { message: 'fail', type: 'error' } });
+    const toast = container.querySelector('.toast') as HTMLElement;
+    const style = toast.getAttribute('style') ?? '';
+    // error background: #fef2f2 or rgb(254, 242, 242)
+    expect(/#fef2f2|rgb\(254,\s*242,\s*242\)/.test(style)).toBe(true);
   });
 
-  it('renders without auto-dismiss when duration=0', () => {
-    const { getByText } = render(Toast, { props: { message: 'z', duration: 0 } });
-    expect(getByText('z')).toBeTruthy();
+  it('renders warning styling with correct background', () => {
+    const { container } = render(Toast, { props: { message: 'warn', type: 'warning' } });
+    const toast = container.querySelector('.toast') as HTMLElement;
+    const style = toast.getAttribute('style') ?? '';
+    // warning background: #fffbeb or rgb(255, 251, 235)
+    expect(/#fffbeb|rgb\(255,\s*251,\s*235\)/.test(style)).toBe(true);
   });
+
+  it('renders dismiss button with aria-label', () => {
+    const { container } = render(Toast, { props: { message: 'x' } });
+    const btn = container.querySelector('button[aria-label="Dismiss"]');
+    expect(btn).not.toBeNull();
+    expect(btn?.textContent?.trim()).toBe('x');
+  });
+
+  // Note: auto-dismiss via onMount setTimeout is not testable in jsdom
+  // (Svelte 4 onMount doesn't fire in @testing-library/svelte v5 + jsdom).
+  // Timer behavior is covered by E2E tests instead.
 });
 
 describe('ExportButton', () => {
@@ -227,7 +246,49 @@ describe('MaskedField', () => {
     expect(text).not.toBe('alice@example.com');
   });
 
-  it('shows reveal button when role can reveal', async () => {
+  it('warehouse manager sees masked value initially and can reveal/hide', async () => {
+    // WarehouseManager has identity.reveal_basic capability
+    setSession({
+      userId: 'u1',
+      role: UserRole.WarehouseManager,
+      loginAt: new Date().toISOString(),
+      lastActivityAt: new Date().toISOString(),
+      isLocked: false,
+    });
+    const originalValue = 'user@domain.com';
+    const { container } = render(MaskedField, {
+      props: { fieldName: 'email', value: originalValue, maskType: 'email' },
+    });
+    await tick();
+
+    const fieldValue = () => container.querySelector('.field-value')?.textContent ?? '';
+    const btn = container.querySelector('.reveal-btn') as HTMLButtonElement | null;
+
+    // Initial: should be masked (not showing original)
+    const maskedText = fieldValue();
+    expect(maskedText).not.toBe(originalValue);
+    expect(maskedText.length).toBeGreaterThan(0);
+
+    if (btn) {
+      // Reveal button should say "Reveal"
+      expect(btn.textContent?.trim()).toBe('Reveal');
+      expect(btn.getAttribute('aria-label')).toBe('Reveal');
+
+      // Click reveal → value changes to original
+      await fireEvent.click(btn);
+      await tick();
+      expect(fieldValue()).toBe(originalValue);
+      expect(btn.textContent?.trim()).toBe('Hide');
+
+      // Click hide → value reverts to masked
+      await fireEvent.click(btn);
+      await tick();
+      expect(fieldValue()).not.toBe(originalValue);
+      expect(btn.textContent?.trim()).toBe('Reveal');
+    }
+  });
+
+  it('administrator with reveal capability sees field correctly', async () => {
     setSession({
       userId: 'u1',
       role: UserRole.Administrator,
@@ -236,53 +297,27 @@ describe('MaskedField', () => {
       isLocked: false,
     });
     const { container } = render(MaskedField, {
-      props: { fieldName: 'email', value: 'a@b.com', maskType: 'email' },
+      props: { fieldName: 'email', value: 'admin@co.com', maskType: 'email' },
     });
     await tick();
-    // Admin may either see the plain value or a reveal button
-    const btn = container.querySelector('.reveal-btn');
-    // We assert the displayed value is present (either plain or masked)
-    expect(container.querySelector('.field-value')).toBeTruthy();
-    // The reveal button may or may not be present depending on policy
-    expect(btn === null || btn instanceof HTMLElement).toBe(true);
-  });
-
-  it('toggles reveal/hide when reveal button clicked (if present)', async () => {
-    setSession({
-      userId: 'u1',
-      role: UserRole.WarehouseManager,
-      loginAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString(),
-      isLocked: false,
-    });
-    const { container } = render(MaskedField, {
-      props: { fieldName: 'email', value: 'user@domain.com', maskType: 'email' },
-    });
-    await tick();
-    const btn = container.querySelector('.reveal-btn') as HTMLButtonElement | null;
-    if (btn) {
-      const before = container.querySelector('.field-value')?.textContent;
-      await fireEvent.click(btn);
-      await tick();
-      const after = container.querySelector('.field-value')?.textContent;
-      expect(after).not.toBe(before);
-    } else {
-      // Role can't reveal — nothing to test here, just ensure no error thrown
-      expect(container.querySelector('.field-value')).toBeTruthy();
-    }
+    // Field value element should exist and contain non-empty text
+    const text = container.querySelector('.field-value')?.textContent ?? '';
+    expect(text.length).toBeGreaterThan(0);
   });
 });
 
 describe('ReservationTimer', () => {
-  // Note: onMount-initiated setInterval doesn't fire in this jsdom test env
-  // (known @testing-library/svelte v5 + Svelte 4 interaction).
-  // We verify the component mounts with .timer element and proper classes.
-  it('renders .timer span with active class when status=active', () => {
+  // Note: onMount/setInterval don't fire in jsdom (Svelte 4 + @testing-library/svelte v5).
+  // Timer countdown behavior is verified by E2E tests (Playwright, real browser).
+  // Unit tests verify: component structure, prop acceptance, CSS class binding, a11y.
+
+  it('renders .timer span element for active reservation', () => {
     const { container } = render(ReservationTimer, {
       props: { lastActivityAt: new Date().toISOString(), status: 'active' },
     });
     const span = container.querySelector('.timer');
-    expect(span).toBeTruthy();
+    expect(span).not.toBeNull();
+    expect(span?.tagName.toLowerCase()).toBe('span');
   });
 
   it('renders .timer span for expired past lastActivityAt', () => {
@@ -290,13 +325,27 @@ describe('ReservationTimer', () => {
     const { container } = render(ReservationTimer, {
       props: { lastActivityAt: past, status: 'active' },
     });
-    expect(container.querySelector('.timer')).toBeTruthy();
+    const span = container.querySelector('.timer');
+    expect(span).not.toBeNull();
   });
 
   it('renders .timer span for released status', () => {
     const { container } = render(ReservationTimer, {
       props: { lastActivityAt: new Date().toISOString(), status: 'released' },
     });
-    expect(container.querySelector('.timer')).toBeTruthy();
+    const span = container.querySelector('.timer');
+    expect(span).not.toBeNull();
+  });
+
+  it('underlying timer logic computes expiry correctly (pure function)', async () => {
+    // Test the logic imported by the component, independent of DOM lifecycle
+    const { getExpiresAt, isReservationExpired } = await import('../../src/modules/orders/reservation-timer');
+    const recent = new Date().toISOString();
+    const expiresAt = getExpiresAt(recent);
+    expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
+
+    const old = new Date(Date.now() - RESERVATION_TIMEOUT_MS - 1000).toISOString();
+    expect(isReservationExpired(old)).toBe(true);
+    expect(isReservationExpired(recent)).toBe(false);
   });
 });

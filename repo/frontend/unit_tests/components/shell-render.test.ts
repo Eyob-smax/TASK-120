@@ -15,109 +15,79 @@ describe('Shell-level components', () => {
   });
 
   describe('NavRail', () => {
-    it('renders without error when user has a role', () => {
-      setSession({
-        userId: 'u1',
-        role: UserRole.Administrator,
+    function getNavLabels(container: HTMLElement): string[] {
+      return [...container.querySelectorAll('.nav-items a .nav-label')].map(el => el.textContent?.trim() ?? '');
+    }
+
+    function makeSession(role: UserRole) {
+      return {
+        userId: `user-${role}`,
+        role,
         loginAt: new Date().toISOString(),
         lastActivityAt: new Date().toISOString(),
         isLocked: false,
-      });
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(container.querySelector('.nav-rail')).toBeTruthy();
+      };
+    }
+
+    it('admin sees all 7 nav items including Identity and Settings', () => {
+      setSession(makeSession(UserRole.Administrator));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      const labels = getNavLabels(container);
+      expect(labels).toEqual(['Dashboard', 'Inventory', 'Orders', 'Files', 'Identity', 'Notifications', 'Settings']);
     });
 
-    it('renders Sign Out and Lock buttons in footer', () => {
-      setSession({
-        userId: 'u1',
-        role: UserRole.Administrator,
-        loginAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        isLocked: false,
-      });
-      const { getByText } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(getByText(/Sign Out|X/)).toBeTruthy();
+    it('warehouse manager sees Dashboard, Inventory, Orders, Files, Notifications', () => {
+      setSession(makeSession(UserRole.WarehouseManager));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      const labels = getNavLabels(container);
+      expect(labels).toEqual(['Dashboard', 'Inventory', 'Orders', 'Files', 'Notifications']);
     });
 
-    it('renders collapsed state when sidebarCollapsed is true', () => {
-      setSession({
-        userId: 'u1',
-        role: UserRole.Administrator,
-        loginAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        isLocked: false,
-      });
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      // Logo/branding shown
-      expect(container.querySelector('.logo')).toBeTruthy();
+    it('picker/packer sees only Dashboard, Orders, Notifications', () => {
+      setSession(makeSession(UserRole.PickerPacker));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      const labels = getNavLabels(container);
+      expect(labels).toEqual(['Dashboard', 'Orders', 'Notifications']);
     });
 
-    it('renders for Warehouse Manager role', () => {
-      setSession({
-        userId: 'wm',
-        role: UserRole.WarehouseManager,
-        loginAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        isLocked: false,
-      });
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(container.querySelector('.nav-rail')).toBeTruthy();
+    it('auditor sees Dashboard, Inventory, Files, Notifications', () => {
+      setSession(makeSession(UserRole.Auditor));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      const labels = getNavLabels(container);
+      expect(labels).toEqual(['Dashboard', 'Inventory', 'Files', 'Notifications']);
     });
 
-    it('renders for Picker/Packer role', () => {
-      setSession({
-        userId: 'pp',
-        role: UserRole.PickerPacker,
-        loginAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        isLocked: false,
-      });
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(container.querySelector('.nav-rail')).toBeTruthy();
-    });
-
-    it('renders for Auditor role', () => {
-      setSession({
-        userId: 'au',
-        role: UserRole.Auditor,
-        loginAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        isLocked: false,
-      });
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(container.querySelector('.nav-rail')).toBeTruthy();
-    });
-
-    it('renders empty nav when no role (unauthenticated)', () => {
+    it('renders no nav items when unauthenticated', () => {
       clearSession();
-      const { container } = render(NavRail, {
-        props: { onLogout: () => {}, onLock: () => {} },
-      });
-      expect(container.querySelector('.nav-rail')).toBeTruthy();
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      expect(container.querySelectorAll('.nav-items a').length).toBe(0);
+    });
+
+    it('renders Sign Out and Lock buttons in nav footer', () => {
+      setSession(makeSession(UserRole.Administrator));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      const footer = container.querySelector('.nav-footer');
+      expect(footer).not.toBeNull();
+      const buttons = footer!.querySelectorAll('button');
+      expect(buttons.length).toBe(2);
+      expect(buttons[0].textContent).toMatch(/Lock/i);
+      expect(buttons[1].textContent).toMatch(/Sign Out/i);
+    });
+
+    it('renders logo and sidebar toggle button', () => {
+      setSession(makeSession(UserRole.Administrator));
+      const { container } = render(NavRail, { props: { onLogout: () => {}, onLock: () => {} } });
+      expect(container.querySelector('.logo')?.textContent).toMatch(/ForgeOps/);
+      expect(container.querySelector('button[aria-label="Toggle sidebar"]')).not.toBeNull();
     });
   });
 
   describe('SearchBar', () => {
-    it('renders search input', () => {
-      const { getByRole } = render(SearchBar);
-      expect(getByRole('searchbox')).toBeTruthy();
-    });
-
-    it('placeholder is present', () => {
+    it('renders search input with correct aria-label and placeholder', () => {
       const { container } = render(SearchBar);
       const input = container.querySelector('input[type="search"]') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.getAttribute('aria-label')).toBe('Inventory search');
       expect(input.placeholder).toContain('inventory');
     });
 
@@ -151,16 +121,22 @@ describe('Shell-level components', () => {
   });
 
   describe('LockScreen', () => {
-    it('renders password form and Unlock button', () => {
+    it('renders lock card with password input and unlock button', () => {
       const { container, getByText } = render(LockScreen);
-      expect(container.querySelector('input[type="password"]')).toBeTruthy();
-      expect(getByText('Unlock')).toBeTruthy();
+      expect(container.querySelector('.lock-card')).not.toBeNull();
+      const input = container.querySelector('input[type="password"]') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      expect(input.getAttribute('autocomplete')).toBe('current-password');
+      expect(input.hasAttribute('required')).toBe(true);
+      expect(getByText('Unlock')).not.toBeNull();
     });
 
-    it('renders lock heading and inactivity message', () => {
-      const { getAllByText, getByText } = render(LockScreen);
-      expect(getAllByText(/Locked/i).length).toBeGreaterThanOrEqual(1);
-      expect(getByText(/inactivity/i)).toBeTruthy();
+    it('renders lock icon text and inactivity explanation', () => {
+      const { container } = render(LockScreen);
+      const icon = container.querySelector('.lock-icon');
+      expect(icon?.textContent?.trim()).toBe('Locked');
+      const para = container.querySelector('p');
+      expect(para?.textContent).toContain('inactivity');
     });
 
     it('shows error when unlock fails', async () => {

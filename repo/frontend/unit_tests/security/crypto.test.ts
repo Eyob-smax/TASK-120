@@ -16,9 +16,7 @@ import {
 } from '../../src/lib/security/crypto';
 import { PBKDF2_SALT_LENGTH } from '../../src/lib/constants';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
-describe.skipIf(!hasWebCrypto)('Crypto Primitives', () => {
+describe('Crypto Primitives', () => {
   describe('Base64 Helpers', () => {
     it('arrayBufferToBase64 and base64ToArrayBuffer round-trip', () => {
       const original = new Uint8Array([1, 2, 3, 4, 5, 255, 0, 128]);

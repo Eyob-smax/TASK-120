@@ -29,8 +29,6 @@ vi.mock('../../src/lib/security/auth.service', () => ({
 
 const fileRepo = new FileRepository();
 const transferRepo = new TransferSessionRepository();
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
 async function seedFile(id: string, deleted = false, sha256 = 'hash-x'): Promise<FileRecord> {
   const now = new Date().toISOString();
   const rec: FileRecord = {
@@ -71,7 +69,7 @@ describe('File Service — edge paths', () => {
       await expect(uploadNewVersion('f-del', data, 'u1')).rejects.toThrow(/deleted/i);
     });
 
-    it.skipIf(!hasWebCrypto)('skips upload when hash is identical', async () => {
+    it('skips upload when hash is identical', async () => {
       const data = new Uint8Array([1, 2, 3, 4]).buffer;
       const hash = await computeHash(data);
       await seedFile('f-same', false, hash);

@@ -8,9 +8,7 @@ import { Repository } from '../../src/lib/db/repository';
 import { STORE_NAMES } from '../../src/lib/db/schema';
 import type { User } from '../../src/lib/types/auth';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
-describe.skipIf(!hasWebCrypto)('Settings Screen Workflows', () => {
+describe('Settings Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
   });

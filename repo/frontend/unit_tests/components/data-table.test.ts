@@ -15,14 +15,20 @@ describe('DataTable', () => {
     clearSession();
   });
 
-  it('shows loading spinner when loading=true', () => {
-    const { getByRole } = render(DataTable, { props: { columns, data: [], loading: true } });
-    expect(getByRole('status')).toBeTruthy();
+  it('shows loading spinner with message when loading=true', () => {
+    const { getByRole, container } = render(DataTable, { props: { columns, data: [], loading: true } });
+    expect(getByRole('status')).not.toBeNull();
+    expect(container.querySelector('.spinner')).not.toBeNull();
+    // No table rendered while loading
+    expect(container.querySelector('table')).toBeNull();
   });
 
-  it('shows empty state when data is empty and not loading', () => {
-    const { getByText } = render(DataTable, { props: { columns, data: [] } });
-    expect(getByText('No records found')).toBeTruthy();
+  it('shows empty state with message when data is empty and not loading', () => {
+    const { container } = render(DataTable, { props: { columns, data: [] } });
+    expect(container.querySelector('.empty-state')).not.toBeNull();
+    expect(container.querySelector('.empty-state p')?.textContent).toBe('No records found');
+    // No table rendered
+    expect(container.querySelector('table')).toBeNull();
   });
 
   it('renders the correct number of rows', () => {

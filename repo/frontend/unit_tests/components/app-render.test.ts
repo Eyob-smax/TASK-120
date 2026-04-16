@@ -24,12 +24,16 @@ describe('App root component', () => {
     await resetDb();
   });
 
-  it('renders login route when unauthenticated', () => {
+  it('renders unauthenticated state without app-layout', () => {
     const { container } = render(App, { props: { isFirstRun: false } });
-    expect(container).toBeTruthy();
+    // Unauthenticated: no nav-rail or app-layout rendered
+    expect(container.querySelector('.app-layout')).toBeNull();
+    expect(container.querySelector('nav.nav-rail')).toBeNull();
+    // Toast container wrapper is still present
+    expect(container.querySelector('.toast-container')).not.toBeNull();
   });
 
-  it('renders layout when session is active', () => {
+  it('renders authenticated layout with nav rail and content area', () => {
     setSession({
       userId: 'u1',
       role: UserRole.Administrator,
@@ -38,10 +42,14 @@ describe('App root component', () => {
       isLocked: false,
     });
     const { container } = render(App, { props: { isFirstRun: false } });
-    expect(container).toBeTruthy();
+    expect(container.querySelector('.app-layout')).not.toBeNull();
+    expect(container.querySelector('nav.nav-rail')).not.toBeNull();
+    expect(container.querySelector('.app-content')).not.toBeNull();
+    expect(container.querySelector('.app-topbar')).not.toBeNull();
+    expect(container.querySelector('.app-main')).not.toBeNull();
   });
 
-  it('renders lock screen when session is locked', () => {
+  it('renders lock screen overlay when session is locked', () => {
     setSession({
       userId: 'u1',
       role: UserRole.Administrator,
@@ -50,6 +58,8 @@ describe('App root component', () => {
       isLocked: true,
     });
     const { container } = render(App, { props: { isFirstRun: false } });
-    expect(container).toBeTruthy();
+    expect(container.querySelector('.lock-screen')).not.toBeNull();
+    expect(container.querySelector('.lock-card')).not.toBeNull();
+    expect(container.querySelector('.lock-card input[type="password"]')).not.toBeNull();
   });
 });
