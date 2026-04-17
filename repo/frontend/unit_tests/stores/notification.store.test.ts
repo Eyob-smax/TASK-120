@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { get } from 'svelte/store';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   notificationStore,
   unreadCountStore,
@@ -10,17 +11,6 @@ import {
 import { NotificationRepository } from '../../src/lib/db';
 import { NotificationType } from '../../src/lib/types/enums';
 import type { Notification } from '../../src/lib/types/notifications';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
 
 const notifRepo = new NotificationRepository();
 
@@ -42,10 +32,12 @@ function makeNotif(id: string, userId: string, readAt?: string): Notification {
 describe('Notification Store', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     notificationStore.set([]);
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     notificationStore.set([]);
     await resetDb();
   });

@@ -1,25 +1,20 @@
-import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { render } from '@testing-library/svelte';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import App from '../../src/App.svelte';
 import { setSession, clearSession } from '../../src/lib/stores/auth.store';
 import { UserRole } from '../../src/lib/types/enums';
 
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => null,
-  getCurrentDEK: () => null,
-  logout: vi.fn(),
-  lock: vi.fn(),
-  unlock: vi.fn(),
-}));
-
 describe('App root component', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     clearSession();
     await resetDb();
   });

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   receiveStock,
   shipStock,
@@ -13,23 +14,14 @@ import { canMutate } from '../../src/lib/security/permissions';
 import { UserRole } from '../../src/lib/types/enums';
 import { SAFETY_STOCK_DEFAULT } from '../../src/lib/constants';
 
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
-
 describe('Inventory Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

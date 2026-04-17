@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   reportDiscrepancy,
   reviewDiscrepancy,
@@ -12,17 +13,9 @@ import {
 import { ChunkRepository } from '../../src/lib/db';
 import type { DiscrepancyAttachment } from '../../src/lib/types/orders';
 
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user', role: 'administrator',
-    loginAt: new Date().toISOString(), lastActivityAt: new Date().toISOString(), isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
-
 describe('Discrepancy Attachments', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('reportDiscrepancy stores attachments', async () => {
     const att: DiscrepancyAttachment = {
@@ -96,8 +89,8 @@ describe('Discrepancy Attachments', () => {
 describe('Discrepancy Attachment Payload Persistence', () => {
   const chunkRepo = new ChunkRepository();
 
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('attachment payload is stored in IndexedDB chunks and retrievable', async () => {
     const fileId = crypto.randomUUID();

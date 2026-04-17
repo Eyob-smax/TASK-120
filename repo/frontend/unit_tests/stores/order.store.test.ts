@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { get } from 'svelte/store';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   orderStore,
   reservationStore,
@@ -18,17 +19,6 @@ import { OrderRepository, TaskRepository, WaveRepository } from '../../src/lib/d
 import { receiveStock } from '../../src/modules/inventory/inventory.service';
 import { OrderStatus, WaveStatus, TaskStatus } from '../../src/lib/types/enums';
 
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
-
 function resetAllStores() {
   orderStore.set([]);
   reservationStore.set([]);
@@ -39,10 +29,12 @@ function resetAllStores() {
 describe('Order Store', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     resetAllStores();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     resetAllStores();
     await resetDb();
   });

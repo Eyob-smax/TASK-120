@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
 import {
@@ -15,17 +15,7 @@ import {
 import { FileRepository, TransferSessionRepository } from '../../src/lib/db';
 import { TransferState } from '../../src/lib/types/enums';
 import type { FileRecord } from '../../src/lib/types/files';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 const fileRepo = new FileRepository();
 const transferRepo = new TransferSessionRepository();
@@ -51,9 +41,11 @@ async function seedFile(id: string, deleted = false, sha256 = 'hash-x'): Promise
 describe('File Service — edge paths', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
 import {
@@ -6,19 +6,7 @@ import {
   encryptAndStore,
   getVectorByProfile,
 } from '../../src/modules/identity/vector.service';
-import { generateDataKey } from '../../src/lib/security/crypto';
-
-let dek: CryptoKey | null = null;
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => dek,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 function makeImageData(width: number, height: number, value = 128): ImageData {
   const data = new Uint8ClampedArray(width * height * 4);
@@ -78,11 +66,11 @@ describe('Vector Service', () => {
   describe('encryptAndStore', () => {
     beforeEach(async () => {
       await initDatabase();
-      dek = await generateDataKey();
+      await setupRealAuth();
     });
 
     afterEach(async () => {
-      dek = null;
+      teardownRealAuth();
       await resetDb();
     });
 
@@ -97,9 +85,10 @@ describe('Vector Service', () => {
     });
 
     it('throws when DEK is not available', async () => {
-      dek = null;
+      teardownRealAuth();
       const vector = new Float32Array(128);
       await expect(encryptAndStore('profile-2', vector)).rejects.toThrow(/encryption key/i);
+      await setupRealAuth();
     });
 
     it('stored vector can be retrieved via getVectorByProfile', async () => {
@@ -113,9 +102,11 @@ describe('Vector Service', () => {
   describe('getVectorByProfile', () => {
     beforeEach(async () => {
       await initDatabase();
+      await setupRealAuth();
     });
 
     afterEach(async () => {
+      teardownRealAuth();
       await resetDb();
     });
 

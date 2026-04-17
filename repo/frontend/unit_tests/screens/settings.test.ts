@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import { createUser, createInitialAdmin, login, logout } from '../../src/lib/security/auth.service';
 import { canMutate, isReadOnly } from '../../src/lib/security/permissions';
 import { UserRole } from '../../src/lib/types/enums';
@@ -11,10 +12,11 @@ import type { User } from '../../src/lib/types/auth';
 describe('Settings Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
-    logout();
+    teardownRealAuth();
     await resetDb();
   });
 

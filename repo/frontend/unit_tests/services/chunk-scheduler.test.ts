@@ -1,23 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
 import { ChunkScheduler } from '../../src/modules/files/chunk-scheduler';
 import { ChunkRepository, TransferSessionRepository } from '../../src/lib/db';
 import { TransferState } from '../../src/lib/types/enums';
 import { FILE_CHUNK_SIZE, DEFAULT_BANDWIDTH_CAP } from '../../src/lib/constants';
-import { generateDataKey } from '../../src/lib/security/crypto';
-
-let dek: CryptoKey | null = null;
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => dek,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 const transferRepo = new TransferSessionRepository();
 const chunkRepo = new ChunkRepository();
@@ -43,11 +31,11 @@ async function createSession(fileId: string, totalChunks: number, completedChunk
 describe('ChunkScheduler', () => {
   beforeEach(async () => {
     await initDatabase();
-    dek = null;
+    await setupRealAuth();
   });
 
   afterEach(async () => {
-    dek = null;
+    teardownRealAuth();
     await resetDb();
   });
 
@@ -170,15 +158,15 @@ describe('ChunkScheduler', () => {
 
   describe('processChunk encryption', () => {
     it('does not encrypt when no DEK is available', async () => {
-      dek = null;
+      teardownRealAuth();
       const s = new ChunkScheduler();
       const data = new Uint8Array([1, 2, 3, 4]).buffer;
       const chunk = await s.processChunk('file-5', 0, data);
       expect(chunk.iv).toBeUndefined();
+      await setupRealAuth();
     });
 
     it('encrypts when DEK is available', async () => {
-      dek = await generateDataKey();
       const s = new ChunkScheduler();
       const data = new Uint8Array([1, 2, 3, 4]).buffer;
       const chunk = await s.processChunk('file-6', 0, data);

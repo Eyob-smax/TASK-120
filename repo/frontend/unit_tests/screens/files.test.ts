@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import { ingestFile } from '../../src/modules/files/file.service';
 import { createVersion, rollbackToVersion, getVersionHistory } from '../../src/modules/files/version.service';
 import { deleteFile, restoreFile, purgeExpired } from '../../src/modules/files/recycle-bin.service';
@@ -16,8 +17,9 @@ function makeData(size: number): ArrayBuffer {
 describe('File Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('upload triggers ingestFile and creates records', async () => {
     const data = makeData(1024);
@@ -38,6 +40,7 @@ describe('File Screen Workflows', () => {
 describe('Version Drawer Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     const now = new Date().toISOString();
     await fileRepo.add({
       id: 'f1', name: 'doc.txt', mimeType: 'text/plain', size: 100,
@@ -45,7 +48,7 @@ describe('Version Drawer Workflows', () => {
       createdAt: now, updatedAt: now, version: 1,
     });
   });
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('version history shows versions in order', async () => {
     await createVersion('f1', 'h1', 100, 'u1');
@@ -70,6 +73,7 @@ describe('Version Drawer Workflows', () => {
 describe('Recycle Bin Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     const now = new Date().toISOString();
     await fileRepo.add({
       id: 'f1', name: 'doc.txt', mimeType: 'text/plain', size: 100,
@@ -77,7 +81,7 @@ describe('Recycle Bin Workflows', () => {
       createdAt: now, updatedAt: now, version: 1,
     });
   });
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('delete moves to recycle bin, restore brings back', async () => {
     const entry = await deleteFile('f1', 'u1');

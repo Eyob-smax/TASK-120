@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
 import {
@@ -12,17 +12,7 @@ import { receiveStock } from '../../src/modules/inventory/inventory.service';
 import { StockRecordRepository, MovementLedgerRepository, ReservationRepository } from '../../src/lib/db';
 import { OrderStatus, ReservationStatus, ReleaseReason, MovementReason } from '../../src/lib/types/enums';
 import { RESERVATION_TIMEOUT_MS } from '../../src/lib/constants';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 const stockRepo = new StockRecordRepository();
 const ledgerRepo = new MovementLedgerRepository();
@@ -31,12 +21,14 @@ const reservationRepo = new ReservationRepository();
 describe('Order Service', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     // Seed stock for tests
     await receiveStock('bin-1', 'sku-1', 'wh-1', 100);
     await receiveStock('bin-2', 'sku-2', 'wh-1', 50);
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

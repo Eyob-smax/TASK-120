@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { get } from 'svelte/store';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   inventoryStore,
   ledgerStore,
@@ -17,17 +18,6 @@ import {
 import { StockRecordRepository, MovementLedgerRepository } from '../../src/lib/db';
 import { MovementReason } from '../../src/lib/types/enums';
 import type { StockRecord, SafetyStockAlert } from '../../src/lib/types/inventory';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
 
 const stockRepo = new StockRecordRepository();
 const ledgerRepo = new MovementLedgerRepository();
@@ -51,12 +41,14 @@ async function seedStock(binId: string, skuId: string, warehouseId: string, qty:
 describe('Inventory Store', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     inventoryStore.set([]);
     ledgerStore.set([]);
     alertStore.set([]);
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     inventoryStore.set([]);
     ledgerStore.set([]);
     alertStore.set([]);

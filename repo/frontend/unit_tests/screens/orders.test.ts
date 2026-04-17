@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import { receiveStock } from '../../src/modules/inventory/inventory.service';
 import {
   createOrder,
@@ -18,24 +19,14 @@ import { OrderStatus, ReservationStatus, DiscrepancyState } from '../../src/lib/
 import { RESERVATION_TIMEOUT_MS, WAVE_DEFAULT_SIZE } from '../../src/lib/constants';
 import { OrderRepository } from '../../src/lib/db';
 
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
-
 describe('Order Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     await receiveStock('bin-1', 'sku-1', 'wh-1', 100);
   });
 
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('create order reserves stock and sets status', async () => {
     const { order, reservations } = await createOrder({

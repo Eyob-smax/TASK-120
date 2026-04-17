@@ -1,21 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import { deleteFile, restoreFile } from '../../src/modules/files/recycle-bin.service';
 import { FileRepository, RecycleBinRepository } from '../../src/lib/db';
 import { RECYCLE_BIN_RETENTION_MS } from '../../src/lib/constants';
 import type { FileRecord, RecycleBinEntry } from '../../src/lib/types/files';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
 
 const fileRepo = new FileRepository();
 const recycleBinRepo = new RecycleBinRepository();
@@ -34,9 +24,11 @@ async function seedFile(id: string, deleted = false): Promise<FileRecord> {
 describe('Recycle Bin error branches', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 
