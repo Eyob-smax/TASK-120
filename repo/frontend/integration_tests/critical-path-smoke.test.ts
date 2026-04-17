@@ -8,7 +8,7 @@
  * Runs in jsdom/fake-indexeddb (no real browser). This validates that all
  * service-layer modules compose correctly as an integration test.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../src/lib/db/connection';
 import { receiveStock } from '../src/modules/inventory/inventory.service';
@@ -38,24 +38,15 @@ import {
 } from '../src/lib/types/enums';
 
 import { getSubscriptions } from '../src/modules/notifications/subscription.service';
-
-vi.mock('../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../unit_tests/_helpers/real-auth';
 
 describe('Critical-path integration smoke: Order → Wave → Discrepancy → Notifications', () => {
   beforeEach(async () => {
     await initDatabase();
     await seedDefaultTemplates();
+    await setupRealAuth();
   });
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow with notification evidence at every business event', async () => {
     // --- 1. Subscribe user to Email + Inbox for discrepancy events ---
@@ -150,8 +141,9 @@ describe('Channel-selection persistence drives queued-attempt creation', () => {
   beforeEach(async () => {
     await initDatabase();
     await seedDefaultTemplates();
+    await setupRealAuth();
   });
-  afterEach(async () => { await resetDb(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('user channel preferences persist and control which external attempts are queued', async () => {
     // 1. Set up multi-channel subscription

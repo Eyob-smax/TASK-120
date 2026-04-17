@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
 import {
@@ -11,18 +11,7 @@ import {
 import { MovementLedgerRepository, SafetyStockConfigRepository, StockRecordRepository } from '../../src/lib/db';
 import { MovementReason } from '../../src/lib/types/enums';
 import { SAFETY_STOCK_DEFAULT } from '../../src/lib/constants';
-
-// Mock getCurrentSession to return a test session
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 const ledgerRepo = new MovementLedgerRepository();
 const stockRepo = new StockRecordRepository();
@@ -31,9 +20,11 @@ const safetyStockRepo = new SafetyStockConfigRepository();
 describe('Inventory Service', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

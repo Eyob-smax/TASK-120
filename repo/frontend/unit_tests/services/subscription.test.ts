@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
 import {
@@ -8,24 +8,16 @@ import {
   isSubscribed,
 } from '../../src/modules/notifications/subscription.service';
 import { NotificationType, NotificationChannel } from '../../src/lib/types/enums';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 describe('Subscription Service', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

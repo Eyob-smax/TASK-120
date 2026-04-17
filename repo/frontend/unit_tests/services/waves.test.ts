@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
 import { OrderRepository, TaskRepository } from '../../src/lib/db';
@@ -12,17 +12,7 @@ import {
 } from '../../src/modules/orders/discrepancy.service';
 import { OrderStatus, WaveStatus, TaskStatus, DiscrepancyState } from '../../src/lib/types/enums';
 import type { Order } from '../../src/lib/types/orders';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 const orderRepo = new OrderRepository();
 const taskRepo = new TaskRepository();
@@ -52,9 +42,11 @@ async function seedOrder(lineCount: number): Promise<Order> {
 describe('Wave Service', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 
@@ -149,9 +141,11 @@ describe('Wave Service', () => {
 describe('Discrepancy Service', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

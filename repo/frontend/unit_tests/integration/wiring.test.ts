@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
 import { receiveStock } from '../../src/modules/inventory/inventory.service';
@@ -29,18 +29,11 @@ import {
 import { OrderRepository, FileRepository } from '../../src/lib/db';
 import { OrderStatus, ReservationStatus, NotificationType, NotificationChannel } from '../../src/lib/types/enums';
 import { RESERVATION_TIMEOUT_MS } from '../../src/lib/constants';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user', role: 'administrator',
-    loginAt: new Date().toISOString(), lastActivityAt: new Date().toISOString(), isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 describe('End-to-End Wiring: Order → Reserve → Cancel', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow: create order reserves stock, cancel releases it', async () => {
     // Setup stock
@@ -73,8 +66,8 @@ describe('End-to-End Wiring: Order → Reserve → Cancel', () => {
 });
 
 describe('End-to-End Wiring: Wave → Task → Discrepancy → Packing Gate', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow: plan wave, assign task, report discrepancy, verify, check packing', async () => {
     // Seed order
@@ -110,8 +103,8 @@ describe('End-to-End Wiring: Wave → Task → Discrepancy → Packing Gate', ()
 });
 
 describe('End-to-End Wiring: File Upload → Chunks → Version', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow: ingest file, schedule chunks, complete, create version', async () => {
     const data = new Uint8Array(1024).buffer;
@@ -132,8 +125,8 @@ describe('End-to-End Wiring: File Upload → Chunks → Version', () => {
 });
 
 describe('End-to-End Wiring: File Delete → Recycle Bin → Restore', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow: delete file, restore from recycle bin', async () => {
     const fileRepo = new FileRepository();
@@ -154,8 +147,8 @@ describe('End-to-End Wiring: File Delete → Recycle Bin → Restore', () => {
 });
 
 describe('End-to-End Wiring: Notification → Read → Subscription', () => {
-  beforeEach(async () => { await initDatabase(); });
-  afterEach(async () => { await resetDb(); });
+  beforeEach(async () => { await initDatabase(); await setupRealAuth(); });
+  afterEach(async () => { teardownRealAuth(); await resetDb(); });
 
   it('full flow: create inbox item, mark read, manage subscription', async () => {
     const notif = await createInboxItem('user-1', NotificationType.LowStock, 'Low Stock', 'SKU-1');

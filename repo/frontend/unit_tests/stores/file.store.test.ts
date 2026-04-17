@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { get } from 'svelte/store';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   fileStore,
   transferStore,
@@ -14,17 +15,6 @@ import {
 import { FileRepository, TransferSessionRepository } from '../../src/lib/db';
 import { TransferState } from '../../src/lib/types/enums';
 import type { FileRecord } from '../../src/lib/types/files';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-user',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
 
 const fileRepo = new FileRepository();
 const transferRepo = new TransferSessionRepository();
@@ -51,12 +41,14 @@ async function seedFile(id: string, deleted = false): Promise<FileRecord> {
 describe('File Store', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     fileStore.set([]);
     transferStore.set([]);
     recycleBinStore.set([]);
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     fileStore.set([]);
     transferStore.set([]);
     recycleBinStore.set([]);

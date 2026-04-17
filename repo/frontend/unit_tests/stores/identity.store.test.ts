@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { get } from 'svelte/store';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 import {
   identityStore,
   captureStore,
@@ -9,17 +10,6 @@ import {
 } from '../../src/modules/identity/identity.store';
 import { FaceProfileRepository } from '../../src/lib/db';
 import type { FaceProfile, CaptureSession } from '../../src/lib/types/identity';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'u1',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
 
 const profileRepo = new FaceProfileRepository();
 
@@ -41,11 +31,13 @@ function makeProfile(id: string): FaceProfile {
 describe('Identity Store', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
     identityStore.set([]);
     captureStore.set(null);
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     identityStore.set([]);
     captureStore.set(null);
     await resetDb();

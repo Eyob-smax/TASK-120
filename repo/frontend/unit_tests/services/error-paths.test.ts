@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, resetDb } from '../../src/lib/db/connection';
 import {
@@ -19,24 +19,16 @@ import {
 } from '../../src/modules/orders/discrepancy.service';
 import { ReleaseReason, WaveStatus, TaskStatus } from '../../src/lib/types/enums';
 import { WaveRepository, TaskRepository, DiscrepancyRepository } from '../../src/lib/db';
-
-vi.mock('../../src/lib/security/auth.service', () => ({
-  getCurrentSession: () => ({
-    userId: 'test-operator',
-    role: 'administrator',
-    loginAt: new Date().toISOString(),
-    lastActivityAt: new Date().toISOString(),
-    isLocked: false,
-  }),
-  getCurrentDEK: () => null,
-}));
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 describe('Error path coverage — not found branches', () => {
   beforeEach(async () => {
     await initDatabase();
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
   });
 

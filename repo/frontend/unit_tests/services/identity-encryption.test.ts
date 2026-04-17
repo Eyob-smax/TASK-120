@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { initDatabase, closeDb, resetDb } from '../../src/lib/db/connection';
 import {
@@ -9,28 +9,17 @@ import {
   exportProfiles,
   importProfiles,
 } from '../../src/modules/identity/identity.service';
-import * as authService from '../../src/lib/security/auth.service';
-import { generateDataKey } from '../../src/lib/security/crypto';
+import { setupRealAuth, teardownRealAuth } from '../_helpers/real-auth';
 
 describe('Identity Attribute Encryption', () => {
-  let mockDEK: CryptoKey;
-
   beforeEach(async () => {
     await initDatabase();
-    mockDEK = await generateDataKey();
-    vi.spyOn(authService, 'getCurrentDEK').mockReturnValue(mockDEK);
-    vi.spyOn(authService, 'getCurrentSession').mockReturnValue({
-      userId: 'test-user',
-      role: 'administrator' as any,
-      loginAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString(),
-      isLocked: false,
-    });
+    await setupRealAuth();
   });
 
   afterEach(async () => {
+    teardownRealAuth();
     await resetDb();
-    vi.restoreAllMocks();
   });
 
   it('enrollProfile stores encrypted attributes at rest', async () => {
@@ -57,9 +46,10 @@ describe('Identity Attribute Encryption', () => {
 
   it('returns empty attributes when DEK unavailable', async () => {
     await enrollProfile('Test', undefined, { secret: 'data' });
-    vi.spyOn(authService, 'getCurrentDEK').mockReturnValue(null);
+    teardownRealAuth();
     const profiles = await getProfiles();
     expect(profiles[0].attributes).toEqual({});
+    await setupRealAuth();
   });
 
   it('decryptProfileAttributes handles legacy plaintext records', async () => {
