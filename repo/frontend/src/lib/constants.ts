@@ -17,7 +17,8 @@ export const MAX_FILE_VERSIONS = 10;
 
 // Recycle bin
 export const RECYCLE_BIN_RETENTION_DAYS = 30;
-export const RECYCLE_BIN_RETENTION_MS = RECYCLE_BIN_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+export const RECYCLE_BIN_RETENTION_MS =
+  RECYCLE_BIN_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
 // Notifications — retry semantics:
 // Attempt 1 = initial send (scheduled immediately).
@@ -30,7 +31,12 @@ export const MAX_NOTIFICATION_RETRIES = 3;
 
 // Authentication / security
 export const IDLE_LOCK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-export const PBKDF2_ITERATIONS = 600_000;
+const DEFAULT_PBKDF2_ITERATIONS = 600_000;
+const pbkdf2IterationsFromEnv = Number(import.meta.env.VITE_PBKDF2_ITERATIONS);
+export const PBKDF2_ITERATIONS =
+  Number.isFinite(pbkdf2IterationsFromEnv) && pbkdf2IterationsFromEnv > 0
+    ? Math.floor(pbkdf2IterationsFromEnv)
+    : DEFAULT_PBKDF2_ITERATIONS;
 export const PBKDF2_SALT_LENGTH = 16; // 128 bits
 export const AES_KEY_LENGTH = 256;
 export const AES_IV_LENGTH = 12; // 96 bits
@@ -45,4 +51,4 @@ export const LIVENESS_DURATION_MS = 3_000;
 
 // Preferences
 export const SEARCH_HISTORY_CAP = 50;
-export const LOCAL_STORAGE_PREFIX = 'forgeops:';
+export const LOCAL_STORAGE_PREFIX = "forgeops:";

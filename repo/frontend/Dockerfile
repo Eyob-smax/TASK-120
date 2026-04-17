@@ -6,6 +6,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --ignore-scripts
 COPY . .
+ARG VITE_PBKDF2_ITERATIONS=600000
+ENV VITE_PBKDF2_ITERATIONS=${VITE_PBKDF2_ITERATIONS}
 RUN npm run build
 
 FROM node:20-alpine AS serve

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, getContext } from 'svelte';
+  import { onMount, getContext, tick } from 'svelte';
   import PageHeader from '$components/PageHeader.svelte';
   import DataTable from '$components/DataTable.svelte';
   import { fileStore, loadFiles, optimisticDeleteFile, transferStore, loadTransfers, resumeTransfer, getTransferSession, getFile, completeTransfer, ChunkScheduler, uploadNewVersion, createVersion } from '$modules/files';
@@ -206,9 +206,13 @@
     ...(canDelete ? [{ label: 'Delete', action: 'delete', variant: 'danger' }] : []),
   ];
 
-  function toggleRecycleBin() {
+  async function toggleRecycleBin() {
     showRecycleBin = !showRecycleBin;
-    if (showRecycleBin) recycleBinRef?.load();
+    if (showRecycleBin) {
+      // Wait for RecycleBinView to mount before invoking its load method.
+      await tick();
+      await recycleBinRef?.load();
+    }
   }
 </script>
 

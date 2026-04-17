@@ -25,7 +25,9 @@ if [[ "${1:-}" != "--skip-e2e" ]]; then
   echo ""
   echo "--- E2E Tests (Playwright) ---"
   # Start the frontend preview server in the background
-  docker compose up -d --build frontend
+  # Lower PBKDF2 cost only for this E2E frontend build to avoid auth/setup timeouts.
+  E2E_PBKDF2_ITERATIONS="${E2E_PBKDF2_ITERATIONS:-120000}"
+  VITE_PBKDF2_ITERATIONS="${E2E_PBKDF2_ITERATIONS}" docker compose up -d --build frontend
 
   # Wait for the preview server to become reachable
   echo "Waiting for frontend on port 4173..."
@@ -42,7 +44,8 @@ if [[ "${1:-}" != "--skip-e2e" ]]; then
   echo "Frontend ready."
 
   # Run Playwright E2E tests
-  docker compose --profile e2e run --rm --build e2e
+  # Do not force rebuild here; it can fail on transient registry DNS issues.
+  docker compose --profile e2e run --rm e2e
 
   # Tear down the frontend container
   docker compose down
