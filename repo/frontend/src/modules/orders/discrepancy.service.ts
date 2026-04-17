@@ -1,13 +1,13 @@
-import { DiscrepancyRepository } from '$lib/db';
-import { ValidationServiceError } from '$lib/services/errors';
-import { createLogger } from '$lib/logging';
-import { DiscrepancyState, NotificationType } from '$lib/types/enums';
-import { dispatchNotification } from '$modules/notifications/notification.service';
-import { getCurrentSession } from '$lib/security/auth.service';
-import type { Discrepancy, DiscrepancyAttachment } from '$lib/types/orders';
+import { DiscrepancyRepository } from "$lib/db";
+import { ValidationServiceError } from "$lib/services/errors";
+import { createLogger } from "$lib/logging";
+import { DiscrepancyState, NotificationType } from "$lib/types/enums";
+import { dispatchNotification } from "$modules/notifications/notification.service";
+import { getCurrentSession } from "$lib/security/auth.service";
+import type { Discrepancy, DiscrepancyAttachment } from "$lib/types/orders";
 
 const discrepancyRepo = new DiscrepancyRepository();
-const logger = createLogger('inventory');
+const logger = createLogger("inventory");
 
 const VALID_TRANSITIONS: Record<DiscrepancyState, DiscrepancyState[]> = {
   [DiscrepancyState.Opened]: [DiscrepancyState.UnderReview],
@@ -16,14 +16,17 @@ const VALID_TRANSITIONS: Record<DiscrepancyState, DiscrepancyState[]> = {
   [DiscrepancyState.Resolved]: [],
 };
 
-function assertTransition(current: DiscrepancyState, target: DiscrepancyState): void {
+function assertTransition(
+  current: DiscrepancyState,
+  target: DiscrepancyState,
+): void {
   const allowed = VALID_TRANSITIONS[current];
   if (!allowed || !allowed.includes(target)) {
-    throw new ValidationServiceError('Invalid state transition', [
+    throw new ValidationServiceError("Invalid state transition", [
       {
-        field: 'state',
+        field: "state",
         message: `Cannot transition from ${current} to ${target}`,
-        code: 'invalid_transition',
+        code: "invalid_transition",
       },
     ]);
   }
@@ -37,8 +40,12 @@ export async function reportDiscrepancy(
   orderId?: string,
 ): Promise<Discrepancy> {
   if (!description.trim()) {
-    throw new ValidationServiceError('Description required', [
-      { field: 'description', message: 'Description is required', code: 'required' },
+    throw new ValidationServiceError("Description required", [
+      {
+        field: "description",
+        message: "Description is required",
+        code: "required",
+      },
     ]);
   }
 
@@ -58,13 +65,23 @@ export async function reportDiscrepancy(
   };
 
   await discrepancyRepo.add(discrepancy);
-  logger.info('Discrepancy reported', { discrepancyId: discrepancy.id, taskId });
+  logger.info("Discrepancy reported", {
+    discrepancyId: discrepancy.id,
+    taskId,
+  });
 
   try {
-    const userId = getCurrentSession()?.userId ?? 'system';
-    await dispatchNotification(userId, NotificationType.DiscrepancyOpened, 'Discrepancy Reported',
-      `Discrepancy on task ${taskId}: ${description}`, { taskId, discrepancyId: discrepancy.id });
-  } catch { /* notification failure should not block discrepancy reporting */ }
+    const userId = reportedBy || getCurrentSession()?.userId || "system";
+    await dispatchNotification(
+      userId,
+      NotificationType.DiscrepancyOpened,
+      "Discrepancy Reported",
+      `Discrepancy on task ${taskId}: ${description}`,
+      { taskId, discrepancyId: discrepancy.id },
+    );
+  } catch {
+    /* notification failure should not block discrepancy reporting */
+  }
 
   return discrepancy;
 }
@@ -74,9 +91,10 @@ export async function reviewDiscrepancy(
   notes?: string,
 ): Promise<Discrepancy> {
   const d = await discrepancyRepo.getById(discrepancyId);
-  if (!d) throw new ValidationServiceError('Discrepancy not found', [
-    { field: 'discrepancyId', message: 'Not found', code: 'not_found' },
-  ]);
+  if (!d)
+    throw new ValidationServiceError("Discrepancy not found", [
+      { field: "discrepancyId", message: "Not found", code: "not_found" },
+    ]);
 
   assertTransition(d.state, DiscrepancyState.UnderReview);
 
@@ -95,15 +113,20 @@ export async function verifyDiscrepancy(
   attachments: DiscrepancyAttachment[] = [],
 ): Promise<Discrepancy> {
   const d = await discrepancyRepo.getById(discrepancyId);
-  if (!d) throw new ValidationServiceError('Discrepancy not found', [
-    { field: 'discrepancyId', message: 'Not found', code: 'not_found' },
-  ]);
+  if (!d)
+    throw new ValidationServiceError("Discrepancy not found", [
+      { field: "discrepancyId", message: "Not found", code: "not_found" },
+    ]);
 
   assertTransition(d.state, DiscrepancyState.Verified);
 
   if (!verifiedBy) {
-    throw new ValidationServiceError('Verifier required', [
-      { field: 'verifiedBy', message: 'Verifier identity is required', code: 'required' },
+    throw new ValidationServiceError("Verifier required", [
+      {
+        field: "verifiedBy",
+        message: "Verifier identity is required",
+        code: "required",
+      },
     ]);
   }
 
@@ -119,11 +142,14 @@ export async function verifyDiscrepancy(
   });
 }
 
-export async function resolveDiscrepancy(discrepancyId: string): Promise<Discrepancy> {
+export async function resolveDiscrepancy(
+  discrepancyId: string,
+): Promise<Discrepancy> {
   const d = await discrepancyRepo.getById(discrepancyId);
-  if (!d) throw new ValidationServiceError('Discrepancy not found', [
-    { field: 'discrepancyId', message: 'Not found', code: 'not_found' },
-  ]);
+  if (!d)
+    throw new ValidationServiceError("Discrepancy not found", [
+      { field: "discrepancyId", message: "Not found", code: "not_found" },
+    ]);
 
   assertTransition(d.state, DiscrepancyState.Resolved);
 
@@ -136,10 +162,17 @@ export async function resolveDiscrepancy(discrepancyId: string): Promise<Discrep
   });
 
   try {
-    const userId = getCurrentSession()?.userId ?? 'system';
-    await dispatchNotification(userId, NotificationType.DiscrepancyClosed, 'Discrepancy Resolved',
-      `Discrepancy for task ${d.taskId} has been resolved`, { taskId: d.taskId, discrepancyId: d.id });
-  } catch { /* notification failure should not block resolution */ }
+    const userId = getCurrentSession()?.userId ?? "system";
+    await dispatchNotification(
+      userId,
+      NotificationType.DiscrepancyClosed,
+      "Discrepancy Resolved",
+      `Discrepancy for task ${d.taskId} has been resolved`,
+      { taskId: d.taskId, discrepancyId: d.id },
+    );
+  } catch {
+    /* notification failure should not block resolution */
+  }
 
   return resolved;
 }
@@ -149,7 +182,9 @@ export async function canProceedToPacking(taskId: string): Promise<boolean> {
   if (discrepancies.length === 0) return true;
 
   return discrepancies.every(
-    d => d.state === DiscrepancyState.Verified || d.state === DiscrepancyState.Resolved,
+    (d) =>
+      d.state === DiscrepancyState.Verified ||
+      d.state === DiscrepancyState.Resolved,
   );
 }
 
@@ -158,13 +193,18 @@ export async function addAttachment(
   attachment: DiscrepancyAttachment,
 ): Promise<Discrepancy> {
   const d = await discrepancyRepo.getById(discrepancyId);
-  if (!d) throw new ValidationServiceError('Discrepancy not found', [
-    { field: 'discrepancyId', message: 'Not found', code: 'not_found' },
-  ]);
+  if (!d)
+    throw new ValidationServiceError("Discrepancy not found", [
+      { field: "discrepancyId", message: "Not found", code: "not_found" },
+    ]);
 
   if (d.state === DiscrepancyState.Resolved) {
-    throw new ValidationServiceError('Cannot modify resolved discrepancy', [
-      { field: 'state', message: 'Discrepancy is resolved', code: 'invalid_state' },
+    throw new ValidationServiceError("Cannot modify resolved discrepancy", [
+      {
+        field: "state",
+        message: "Discrepancy is resolved",
+        code: "invalid_state",
+      },
     ]);
   }
 
@@ -175,6 +215,8 @@ export async function addAttachment(
   });
 }
 
-export async function getDiscrepanciesByTask(taskId: string): Promise<Discrepancy[]> {
+export async function getDiscrepanciesByTask(
+  taskId: string,
+): Promise<Discrepancy[]> {
   return discrepancyRepo.getByTask(taskId);
 }
