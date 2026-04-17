@@ -165,6 +165,8 @@ test.describe("File version lifecycle — real workflows", () => {
     // Version drawer should open
     const drawer = page.locator('[role="dialog"]');
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator("text=Version")).toBeVisible();
+    await expect(
+      drawer.getByRole("heading", { name: "Version History" }),
+    ).toBeVisible();
   });
 });
