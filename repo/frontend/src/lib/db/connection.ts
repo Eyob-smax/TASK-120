@@ -3,10 +3,23 @@ import { DB_NAME, DB_VERSION, STORE_DEFINITIONS, STORE_NAMES } from "./schema";
 
 let db: IDBPDatabase | null = null;
 
+function resolveDbName(): string {
+  const maybeProcess = (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process;
+
+  const workerId =
+    maybeProcess?.env?.VITEST_POOL_ID ?? maybeProcess?.env?.VITEST_WORKER_ID;
+
+  return workerId ? `${DB_NAME}-${workerId}` : DB_NAME;
+}
+
 export async function initDatabase(): Promise<IDBPDatabase> {
   if (db) return db;
 
-  db = await openDB(DB_NAME, DB_VERSION, {
+  db = await openDB(resolveDbName(), DB_VERSION, {
     upgrade(database, oldVersion, _newVersion, transaction) {
       // Create stores that don't exist yet (fresh installs or new stores)
       for (const storeDef of STORE_DEFINITIONS) {
@@ -53,7 +66,7 @@ export function closeDb(): void {
 export async function resetDb(): Promise<void> {
   closeDb();
   await new Promise<void>((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(DB_NAME);
+    const req = indexedDB.deleteDatabase(resolveDbName());
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
     req.onblocked = () => resolve();

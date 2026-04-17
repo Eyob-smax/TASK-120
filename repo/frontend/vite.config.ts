@@ -1,17 +1,17 @@
-import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { resolve } from 'path';
+import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [svelte()],
   resolve: {
     alias: {
-      '$app': resolve(__dirname, 'src/app'),
-      '$routes': resolve(__dirname, 'src/routes'),
-      '$components': resolve(__dirname, 'src/components'),
-      '$modules': resolve(__dirname, 'src/modules'),
-      '$lib': resolve(__dirname, 'src/lib'),
-      '$styles': resolve(__dirname, 'src/styles'),
+      $app: resolve(__dirname, "src/app"),
+      $routes: resolve(__dirname, "src/routes"),
+      $components: resolve(__dirname, "src/components"),
+      $modules: resolve(__dirname, "src/modules"),
+      $lib: resolve(__dirname, "src/lib"),
+      $styles: resolve(__dirname, "src/styles"),
     },
   },
   server: {
@@ -22,20 +22,25 @@ export default defineConfig({
     host: true,
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: true,
   },
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: "jsdom",
     testTimeout: 30_000,
-    include: ['unit_tests/**/*.test.ts', 'unit_tests/**/*.spec.ts', 'integration_tests/**/*.test.ts'],
+    hookTimeout: 30_000,
+    include: [
+      "unit_tests/**/*.test.ts",
+      "unit_tests/**/*.spec.ts",
+      "integration_tests/**/*.test.ts",
+    ],
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'text-summary', 'json-summary'],
-      reportsDirectory: './coverage',
-      include: ['src/**/*.ts', 'src/**/*.svelte'],
-      exclude: ['src/**/*.d.ts', 'src/**/index.ts'],
+      provider: "v8",
+      reporter: ["text", "text-summary", "json-summary"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.ts", "src/**/*.svelte"],
+      exclude: ["src/**/*.d.ts", "src/**/index.ts"],
     },
   },
 });
