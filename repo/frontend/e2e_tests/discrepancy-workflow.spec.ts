@@ -4,30 +4,46 @@
  * Exercises the full wave/task/discrepancy lifecycle through the browser UI.
  * Setup chain: receive stock → create order → plan wave → start wave → assign task
  */
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from "@playwright/test";
 
-async function setupAdmin(page: Page, username: string) {
-  await page.goto('/');
-  await page.fill('input[placeholder="Your name"]', 'Disc Tester');
-  await page.fill('input[placeholder="Username"]', username);
-  await page.fill('input[placeholder="Password"]', 'SecurePass123!');
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/#\/dashboard/);
+const DASHBOARD_NAV_TIMEOUT_MS = 90_000;
+
+async function expectToast(page: Page, text: string | RegExp) {
+  await expect(
+    page.getByRole("status").filter({ hasText: text }).last(),
+  ).toBeVisible();
 }
 
-async function receiveStock(page: Page, warehouse: string, bin: string, sku: string, qty: number) {
+async function setupAdmin(page: Page, username: string) {
+  await page.goto("/");
+  await page.fill('input[placeholder="Your name"]', "Disc Tester");
+  await page.fill('input[placeholder="Username"]', username);
+  await page.fill('input[placeholder="Password"]', "SecurePass123!");
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/#\/dashboard/, {
+    timeout: DASHBOARD_NAV_TIMEOUT_MS,
+  });
+}
+
+async function receiveStock(
+  page: Page,
+  warehouse: string,
+  bin: string,
+  sku: string,
+  qty: number,
+) {
   await page.click('nav.nav-rail a:has-text("Inventory")');
   await expect(page).toHaveURL(/#\/inventory/);
   await page.click('button:has-text("Receive")');
   const modal = page.locator('[role="dialog"]');
   await expect(modal).toBeVisible();
-  const inputs = modal.locator('input');
+  const inputs = modal.locator("input");
   await inputs.nth(0).fill(warehouse);
   await inputs.nth(1).fill(bin);
   await inputs.nth(2).fill(sku);
   await inputs.nth(3).fill(String(qty));
   await modal.locator('button:has-text("Receive")').click();
-  await expect(page.locator('[role="status"]')).toContainText('Received');
+  await expectToast(page, "Received");
 }
 
 async function createOrder(page: Page, sku: string, bin: string, qty: number) {
@@ -36,12 +52,12 @@ async function createOrder(page: Page, sku: string, bin: string, qty: number) {
   await page.click('button:has-text("Create Order")');
   const drawer = page.locator('[role="dialog"]');
   await expect(drawer).toBeVisible();
-  const lineInputs = drawer.locator('.line-row input');
+  const lineInputs = drawer.locator(".line-row input");
   await lineInputs.nth(0).fill(sku);
   await lineInputs.nth(1).fill(bin);
   await lineInputs.nth(2).fill(String(qty));
-  await drawer.locator('button.submit-btn').click();
-  await expect(page.locator('[role="status"]')).toContainText('Order created');
+  await drawer.locator("button.submit-btn").click();
+  await expectToast(page, "Order created");
 }
 
 async function navigateToWaves(page: Page) {
@@ -60,13 +76,13 @@ async function planAndStartWave(page: Page) {
   const checkbox = planModal.locator('input[type="checkbox"]').first();
   await checkbox.check();
 
-  // Confirm the wave
-  await planModal.locator('button:has-text("Confirm")').click();
-  await expect(page.locator('[role="status"]')).toContainText('Wave planned');
+  // Confirm the wave. The modal uses a custom confirm label.
+  await planModal.locator('button:has-text("Plan Wave")').click();
+  await expectToast(page, "Wave planned");
 
   // Start the wave via row action
   await page.click('button:has-text("Start")');
-  await expect(page.locator('[role="status"]')).toContainText('Wave started');
+  await expectToast(page, "Wave started");
 }
 
 async function assignTask(page: Page, pickerId: string) {
@@ -75,51 +91,62 @@ async function assignTask(page: Page, pickerId: string) {
   const assignModal = page.locator('[role="dialog"]:has-text("Assign Task")');
   await expect(assignModal).toBeVisible();
 
-  await assignModal.locator('input[placeholder="Enter picker user ID"]').fill(pickerId);
+  await assignModal
+    .locator('input[placeholder="Enter picker user ID"]')
+    .fill(pickerId);
   await assignModal.locator('button:has-text("Confirm")').click();
-  await expect(page.locator('[role="status"]')).toContainText('assigned');
+  await expectToast(page, "assigned");
 }
 
-test.describe('Discrepancy workflow', () => {
-  test('report discrepancy blocks packing gate, verify+resolve unblocks it', async ({ page }) => {
+test.describe("Discrepancy workflow", () => {
+  test("report discrepancy blocks packing gate, verify+resolve unblocks it", async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
-    await setupAdmin(page, 'disc-full-flow-1');
+    await setupAdmin(page, "disc-full-flow-1");
 
     // Setup: receive stock, create order
-    await receiveStock(page, 'WH-1', 'BIN-1', 'SKU-DISC', 100);
-    await createOrder(page, 'SKU-DISC', 'BIN-1', 10);
+    await receiveStock(page, "WH-1", "BIN-1", "SKU-DISC", 100);
+    await createOrder(page, "SKU-DISC", "BIN-1", 10);
     await navigateToWaves(page);
 
     // Plan wave, start it, assign task
     await planAndStartWave(page);
-    await assignTask(page, 'picker-1');
+    await assignTask(page, "picker-1");
 
     // Start the task
-    const taskTable = page.locator('#tasks-main').locator('..').locator('table');
+    const taskTable = page
+      .locator("#tasks-main")
+      .locator("..")
+      .locator("table");
     await page.click('button:has-text("Start Task")');
-    await expect(page.locator('[role="status"]')).toContainText('Task started');
+    await expectToast(page, "Task started");
 
     // Open discrepancy drawer
     await page.click('button:has-text("Discrepancies")');
     const drawer = page.locator('[role="dialog"]:has-text("Discrepancies")');
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator('.empty')).toContainText('No discrepancies');
+    await expect(drawer.locator(".empty")).toContainText("No discrepancies");
 
     // Report a discrepancy
-    await drawer.locator('input[placeholder="Description"]').fill('Missing item in bin');
+    await drawer
+      .locator('input[placeholder="Description"]')
+      .fill("Missing item in bin");
     await drawer.locator('button:has-text("Report")').click();
-    await expect(page.locator('[role="status"]')).toContainText('Discrepancy reported');
+    await expectToast(page, "Discrepancy reported");
 
     // Verify the discrepancy card appears with "Opened" state
-    const discCard = drawer.locator('.disc-card').first();
+    const discCard = drawer.locator(".disc-card").first();
     await expect(discCard).toBeVisible();
-    await expect(discCard.locator('.disc-state[data-state="opened"]')).toBeVisible();
-    await expect(discCard.locator('.disc-desc')).toContainText('Missing item');
+    await expect(
+      discCard.locator('.disc-state[data-state="opened"]'),
+    ).toBeVisible();
+    await expect(discCard.locator(".disc-desc")).toContainText("Missing item");
 
     // Close drawer and check packing gate — should be blocked
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await page.click('button:has-text("Check Packing")');
-    await expect(page.locator('[role="status"]')).toContainText('Cannot proceed');
+    await expectToast(page, "Cannot proceed");
 
     // Re-open drawer and advance the discrepancy through its lifecycle
     await page.click('button:has-text("Discrepancies")');
@@ -128,47 +155,55 @@ test.describe('Discrepancy workflow', () => {
 
     // Review the discrepancy (Opened → Under Review)
     await drawer2.locator('.disc-actions button:has-text("Review")').click();
-    await expect(drawer2.locator('.disc-state[data-state="under_review"]')).toBeVisible();
+    await expect(
+      drawer2.locator('.disc-state[data-state="under_review"]'),
+    ).toBeVisible();
 
     // Verify the discrepancy (Under Review → Verified)
-    await drawer2.locator('input[placeholder="Verification notes"]').fill('Confirmed missing');
+    await drawer2
+      .locator('input[placeholder="Verification notes"]')
+      .fill("Confirmed missing");
     await drawer2.locator('.disc-actions button:has-text("Verify")').click();
-    await expect(page.locator('[role="status"]')).toContainText('verified');
-    await expect(drawer2.locator('.disc-state[data-state="verified"]')).toBeVisible();
+    await expectToast(page, "verified");
+    await expect(
+      drawer2.locator('.disc-state[data-state="verified"]'),
+    ).toBeVisible();
 
     // Resolve (Verified → Resolved)
     await drawer2.locator('.disc-actions button:has-text("Resolve")').click();
-    await expect(page.locator('[role="status"]')).toContainText('resolved');
-    await expect(drawer2.locator('.disc-state[data-state="resolved"]')).toBeVisible();
+    await expectToast(page, "resolved");
+    await expect(
+      drawer2.locator('.disc-state[data-state="resolved"]'),
+    ).toBeVisible();
 
     // Close drawer and check packing gate — should now pass
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await page.click('button:has-text("Check Packing")');
-    await expect(page.locator('[role="status"]')).toContainText('packing can proceed');
+    await expectToast(page, "packing can proceed");
   });
 
-  test('complete task after packing cleared', async ({ page }) => {
+  test("complete task after packing cleared", async ({ page }) => {
     test.setTimeout(60_000);
-    await setupAdmin(page, 'disc-complete-1');
+    await setupAdmin(page, "disc-complete-1");
 
     // Setup: full chain without discrepancy (no discrepancies → packing gate auto-passes)
-    await receiveStock(page, 'WH-1', 'BIN-2', 'SKU-CLEAN', 50);
-    await createOrder(page, 'SKU-CLEAN', 'BIN-2', 5);
+    await receiveStock(page, "WH-1", "BIN-2", "SKU-CLEAN", 50);
+    await createOrder(page, "SKU-CLEAN", "BIN-2", 5);
     await navigateToWaves(page);
     await planAndStartWave(page);
-    await assignTask(page, 'picker-2');
+    await assignTask(page, "picker-2");
 
     // Start task
     await page.click('button:has-text("Start Task")');
-    await expect(page.locator('[role="status"]')).toContainText('Task started');
+    await expectToast(page, "Task started");
 
     // Check packing — should pass (no discrepancies)
     await page.click('button:has-text("Check Packing")');
-    await expect(page.locator('[role="status"]')).toContainText('packing can proceed');
+    await expectToast(page, "packing can proceed");
 
     // Complete the task
     await page.click('button:has-text("Complete Task")');
-    await expect(page.locator('[role="status"]')).toContainText('Task completed');
+    await expectToast(page, "Task completed");
 
     // Verify task status in table shows completed
     await expect(page.locator('td:has-text("completed")')).toBeVisible();

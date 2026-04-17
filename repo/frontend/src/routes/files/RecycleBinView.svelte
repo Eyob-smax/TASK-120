@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte';
-  import { getRecycleBinContents, restoreFile, purgeExpired } from '$modules/files';
+  import { getRecycleBinContents, optimisticRestoreFile, purgeExpired } from '$modules/files';
   import type { RecycleBinEntry } from '$lib/types/files';
 
   const toast: any = getContext('toast');
@@ -16,7 +16,7 @@
 
   async function handleRestore(entryId: string) {
     try {
-      await restoreFile(entryId);
+      await optimisticRestoreFile(entryId);
       await load();
       toast?.addToast('File restored', 'success');
     } catch (e: any) {

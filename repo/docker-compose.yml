@@ -3,6 +3,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_PBKDF2_ITERATIONS: ${VITE_PBKDF2_ITERATIONS:-600000}
     ports:
       - "4173:4173"
     environment:
@@ -22,6 +24,6 @@ services:
     depends_on:
       - frontend
     environment:
-      - BASE_URL=http://frontend:4173
+      - BASE_URL=http://localhost:4173
     profiles:
       - e2e
