@@ -178,7 +178,7 @@ export async function encryptBinary(
   const ciphertext = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
-    data,
+    new Uint8Array(data),
   );
   return { ciphertext, iv };
 }
@@ -191,6 +191,6 @@ export async function decryptBinary(
   return crypto.subtle.decrypt(
     { name: 'AES-GCM', iv },
     key,
-    ciphertext,
+    new Uint8Array(ciphertext),
   );
 }

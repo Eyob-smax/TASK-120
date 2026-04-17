@@ -14,9 +14,7 @@ import {
 } from '../../src/lib/security/auth.service';
 import { UserRole } from '../../src/lib/types/enums';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
-describe.skipIf(!hasWebCrypto)('Auth Service', () => {
+describe('Auth Service', () => {
   beforeEach(async () => {
     await initDatabase();
   });

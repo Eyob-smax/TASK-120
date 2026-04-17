@@ -19,5 +19,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.e2e
+    depends_on:
+      - frontend
+    environment:
+      - BASE_URL=http://frontend:4173
     profiles:
       - e2e

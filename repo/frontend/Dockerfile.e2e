@@ -7,4 +7,5 @@ COPY package.json package-lock.json* ./
 RUN npm install --include=dev
 RUN npx playwright install --with-deps chromium
 COPY . .
+ENV BASE_URL=http://localhost:4173
 CMD ["npx", "playwright", "test"]

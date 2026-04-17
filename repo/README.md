@@ -2,6 +2,19 @@
 
 Offline browser SPA for warehouse inventory, orders, file management, and identity — built with Svelte 4 + TypeScript, Vite 5, IndexedDB, and WebCrypto. No backend required.
 
+## Project Type
+
+- **web** (frontend-only SPA)
+
+## Backend/API Scope (Important)
+
+- This repository is intentionally **frontend-only**.
+- There is **no backend service** in this codebase.
+- There are **no HTTP API endpoints** to call or validate.
+- The application runs fully offline using browser-side storage and logic.
+- Therefore, this project does **not** include backend API tests, HTTP request tests, or backend integration tests.
+- Existing "integration" tests in this repository validate **frontend/service-layer module interactions** only.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -68,15 +81,15 @@ docker compose up --build
 
 ## Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Dev server (port 5173) |
-| `npm run build` | Production build |
-| `npm run preview` | Preview build (port 4173) |
-| `npm run test` | Run unit + integration tests |
-| `npm run test:coverage` | Tests + v8 coverage |
-| `npm run test:e2e` | Browser E2E tests (Playwright) |
-| `npm run check` | TypeScript + Svelte type checking |
+| Script                  | Description                       |
+| ----------------------- | --------------------------------- |
+| `npm run dev`           | Dev server (port 5173)            |
+| `npm run build`         | Production build                  |
+| `npm run preview`       | Preview build (port 4173)         |
+| `npm run test`          | Run unit + integration tests      |
+| `npm run test:coverage` | Tests + v8 coverage               |
+| `npm run test:e2e`      | Browser E2E tests (Playwright)    |
+| `npm run check`         | TypeScript + Svelte type checking |
 
 ## Configuration
 

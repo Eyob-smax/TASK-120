@@ -12,9 +12,7 @@ import {
 import * as authService from '../../src/lib/security/auth.service';
 import { generateDataKey } from '../../src/lib/security/crypto';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
-describe.skipIf(!hasWebCrypto)('Identity Attribute Encryption', () => {
+describe('Identity Attribute Encryption', () => {
   let mockDEK: CryptoKey;
 
   beforeEach(async () => {

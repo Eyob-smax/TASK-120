@@ -17,8 +17,6 @@ import { FileRepository, VersionRepository, RecycleBinRepository, ChunkRepositor
 import { TransferState } from '../../src/lib/types/enums';
 import { MAX_FILE_VERSIONS, RECYCLE_BIN_RETENTION_MS, FILE_CHUNK_SIZE, MAX_CONCURRENT_CHUNKS } from '../../src/lib/constants';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
-
 const fileRepo = new FileRepository();
 const versionRepo = new VersionRepository();
 const recycleBinRepo = new RecycleBinRepository();
@@ -30,7 +28,7 @@ function makeFileData(size: number): ArrayBuffer {
   return arr.buffer;
 }
 
-describe.skipIf(!hasWebCrypto)('File Service', () => {
+describe('File Service', () => {
   beforeEach(async () => {
     await initDatabase();
   });
@@ -103,7 +101,7 @@ describe.skipIf(!hasWebCrypto)('File Service', () => {
   });
 });
 
-describe.skipIf(!hasWebCrypto)('ChunkScheduler', () => {
+describe('ChunkScheduler', () => {
   it('limits concurrent chunks to MAX_CONCURRENT_CHUNKS', () => {
     const scheduler = new ChunkScheduler();
     expect(scheduler.getActiveCount()).toBe(0);

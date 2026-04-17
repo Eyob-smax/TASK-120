@@ -7,14 +7,13 @@ import { deleteFile, restoreFile, purgeExpired } from '../../src/modules/files/r
 import { FileRepository } from '../../src/lib/db';
 import { MAX_FILE_VERSIONS, RECYCLE_BIN_RETENTION_MS } from '../../src/lib/constants';
 
-const hasWebCrypto = typeof globalThis.crypto?.subtle !== 'undefined';
 const fileRepo = new FileRepository();
 
 function makeData(size: number): ArrayBuffer {
   return new Uint8Array(size).buffer;
 }
 
-describe.skipIf(!hasWebCrypto)('File Screen Workflows', () => {
+describe('File Screen Workflows', () => {
   beforeEach(async () => {
     await initDatabase();
   });
