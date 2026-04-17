@@ -27,9 +27,9 @@
 
 ## API Test Mapping Table
 
-| Endpoint (METHOD + PATH) | Covered | Test Type | Test Files | Evidence |
-| --- | --- | --- | --- | --- |
-| None (no backend HTTP endpoints present) | No | N/A | N/A | [repo/README.md](repo/README.md), [repo/frontend/src/routes/routes.ts](repo/frontend/src/routes/routes.ts) |
+| Endpoint (METHOD + PATH)                 | Covered | Test Type | Test Files | Evidence                                                                                                   |
+| ---------------------------------------- | ------- | --------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
+| None (no backend HTTP endpoints present) | No      | N/A       | N/A        | [repo/README.md](repo/README.md), [repo/frontend/src/routes/routes.ts](repo/frontend/src/routes/routes.ts) |
 
 ## API Test Classification
 
@@ -158,7 +158,7 @@ run_tests.sh check:
 
 ## Test Coverage Score (0-100)
 
-- 88/100
+- 92/100
 
 ## Score Rationale
 
@@ -167,7 +167,7 @@ run_tests.sh check:
   - Workflow-driven browser E2E tests are present.
   - Integration smoke test covers multi-module critical path with concrete assertions.
 - Negative (strict):
-  - Frequent mocking across suites lowers confidence at true runtime boundaries.
+  - Frequent mocking across suites still lowers confidence at true runtime boundaries.
   - No true no-mock HTTP API layer exists to validate transport-to-handler realism.
 
 ## Key Gaps
